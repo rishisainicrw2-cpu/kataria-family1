@@ -1,0 +1,12 @@
+{
+  "name": "kataria-family",
+  "version": "1.0.0",
+  "description": "KATARIA FAMILY — Together as One. Private family chat, plans and memories (PWA + Node backend, zero npm dependencies).",
+  "private": true,
+  "license": "MIT",
+  "engines": { "node": ">=22.13" },
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning server/index.js",
+    "test": "node --disable-warning=ExperimentalWarning test/run.js && node --disable-warning=ExperimentalWarning test/drive.js && node --disable-warning=ExperimentalWarning test/backup.js"
+  }
+}

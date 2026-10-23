@@ -1,0 +1,22 @@
+{
+  "name": "KATARIA FAMILY",
+  "short_name": "KATARIA",
+  "description": "Together as One ✦ — private family chat, plans and memories.",
+  "id": "/",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#05060d",
+  "theme_color": "#10236b",
+  "categories": ["social", "lifestyle", "productivity"],
+  "icons": [
+    {"src": "/assets/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "/assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    {"src": "/assets/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ],
+  "shortcuts": [
+    {"name": "Family chat", "url": "/#/chats"},
+    {"name": "Calendar", "url": "/#/calendar"}
+  ]
+}

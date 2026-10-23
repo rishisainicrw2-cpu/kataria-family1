@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="KATARIA FAMILY">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1f46d6"/>
+      <stop offset="0.55" stop-color="#10236b"/>
+      <stop offset="1" stop-color="#05060d"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffe29a"/>
+      <stop offset="0.5" stop-color="#e9b949"/>
+      <stop offset="1" stop-color="#b8861b"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <!-- unity arc: three linked figures above the K -->
+  <path d="M150 128 Q256 62 362 128" fill="none" stroke="#e9b949" stroke-opacity=".55" stroke-width="10" stroke-linecap="round"/>
+  <circle cx="176" cy="112" r="17" fill="url(#gold)"/>
+  <circle cx="256" cy="90" r="22" fill="url(#gold)"/>
+  <circle cx="336" cy="112" r="17" fill="url(#gold)"/>
+  <!-- letter K -->
+  <path d="M150 190 H208 V274 L292 190 H364 L272 282 L370 420 H298 L232 324 L208 348 V420 H150 Z" fill="url(#gold)"/>
+</svg>
