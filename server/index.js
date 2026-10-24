@@ -1,4 +1,4 @@
-// KATARIA FAMILY server entry. Zero npm dependencies: needs Node.js 22+ (built-in node:sqlite, fetch, crypto).
+// HINDU ESPORTS server entry. Zero npm dependencies: needs Node.js 22+ (built-in node:sqlite, fetch, crypto).
 const http = require('http');
 const cfg = require('./config');
 

@@ -1,5 +1,5 @@
 // HINDU ESPORTS service worker: caches the app shell only. API/WebSocket/Drive files are never cached,
-// so private family data is not stored by the service worker.
+// so private clan data is not stored by the service worker.
 const CACHE = 'hindu-esports-shell-v1';
 const SHELL = ['/', '/styles.css', '/js/core.js', '/js/views.js', '/js/chat.js', '/js/features.js', '/js/features2.js', '/js/app.js',
   '/assets/icon-192.png', '/assets/icon-512.png', '/assets/logo.png', '/manifest.webmanifest'];
@@ -17,7 +17,7 @@ self.addEventListener('fetch', e => {
 // Pushes carry no payload (keeps private text off third-party push servers); we fetch the latest unread item ourselves.
 self.addEventListener('push', e => {
   e.waitUntil((async () => {
-    let d = { title: 'HINDU ESPORTS', body: 'New activity in your family', url: '/' };
+    let d = { title: 'HINDU ESPORTS', body: 'New activity in your clan', url: '/' };
     try { const r = await fetch('/api/notifications/latest', { credentials: 'same-origin' }); if (r.ok) d = await r.json(); } catch (_) {}
     await self.registration.showNotification(d.title || 'HINDU ESPORTS', {
       body: d.body || '', icon: '/assets/icon-192.png', badge: '/assets/favicon-48.png', data: '/' + (d.url && d.url.startsWith('#') ? d.url : '')

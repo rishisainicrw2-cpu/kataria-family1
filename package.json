@@ -1,7 +1,7 @@
 {
   "name": "kataria-family",
   "version": "1.0.0",
-  "description": "KATARIA FAMILY — Together as One. Private family chat, plans and memories (PWA + Node backend, zero npm dependencies).",
+  "description": "HINDU ESPORTS — Together as One. Private clan chat, match plans and highlights (PWA + Node backend, zero npm dependencies).",
   "private": true,
   "license": "MIT",
   "engines": { "node": ">=22.13" },

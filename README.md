@@ -1,13 +1,13 @@
-# KATARIA FAMILY ✦ — Together as One
+# HINDU ESPORTS ✦ — Together as One
 
-A private family app: group chat, private chats, planning, events and calendar, shopping lists, expenses,
+A private clan app: group chat, private chats, planning, events and calendar, shopping lists, expenses,
 photos and memories, invitations and roles. It is a real Node.js + SQLite backend with WebSocket real-time
 chat, and an installable PWA frontend. **No computer is needed** — everything below works from an Android phone.
 
 - **Zero npm dependencies.** Needs only Node 22.13+. Nothing to install or build.
 - **Free to run.** Free hosting + your own Google Drive for files. No paid APIs.
 - **Private.** Passwords are hashed (scrypt). Every request is permission-checked on the server.
-  No end-to-end encryption is claimed — the server can read messages, so host it yourself and keep the family invite-only.
+  No end-to-end encryption is claimed — the server can read messages, so host it yourself and keep the clan invite-only.
 
 ---
 
@@ -15,7 +15,7 @@ chat, and an installable PWA frontend. **No computer is needed** — everything 
 
 | Area | Status |
 |---|---|
-| Registration, login, logout, password change/reset, account + family deletion | ✅ automated tests (126 checks) |
+| Registration, login, logout, password change/reset, account + clan deletion | ✅ automated tests (126 checks) |
 | Roles/permissions, cross-family and private-chat isolation, persistence across restart | ✅ automated tests |
 | Chat send/receive/persist, all 20 screens render on a phone-sized browser, no JS errors | ✅ tested in headless Chromium |
 | Google Drive upload/download/folders/disconnect/errors | ✅ tested against a **mock** of Google's API (64 checks) |
@@ -38,7 +38,7 @@ Please treat the three ⚠️ items as "should work, verify on your phone".
    - Open the file explorer, tap **⋯ → Upload…**, and upload the `kataria-family.zip` you were given.
    - In the terminal at the bottom type: `unzip kataria-family.zip && cp -r kataria-family/. . && rm -rf kataria-family kataria-family.zip`
    - Run the tests if you like: `npm test`
-   - Commit: `git add -A && git commit -m "KATARIA FAMILY" && git push`
+   - Commit: `git add -A && git commit -m "HINDU ESPORTS" && git push`
    - Tip: in Chrome tap ⋮ → **Desktop site** so the editor is usable.
 
 ## Part 2 — Host it free on Render
@@ -56,10 +56,10 @@ Please treat the three ⚠️ items as "should work, verify on your phone".
 | `GOOGLE_CLIENT_ID` | from Part 3 |
 | `GOOGLE_CLIENT_SECRET` | from Part 3 |
 
-5. Deploy. Open the address — you should see the KATARIA FAMILY welcome screen.
+5. Deploy. Open the address — you should see the HINDU ESPORTS welcome screen.
 
 > **Important — free hosts forget their disk.** Render's free plan wipes local files when the app sleeps/restarts.
-> KATARIA FAMILY handles this by automatically backing up the database (encrypted) into your Drive folder and
+> HINDU ESPORTS handles this by automatically backing up the database (encrypted) into your Drive folder and
 > restoring it on start. This only works **after you connect Google Drive** and have set `SECRET_KEY`. Until then, data can be lost.
 > After connecting, open **Profile → Google Drive** and copy the **restore key** into a `DRIVE_RESTORE_KEY` environment variable
 > so a fresh server can recover everything. Free instances also sleep after ~15 minutes idle, so the first load can take ~30 s.
@@ -70,7 +70,7 @@ Your folder ID `19c1XVBgxeafcZpllGh2GA3ap2wk6BHUO` is already built in.
 
 1. On your phone open **console.cloud.google.com** (use Chrome ⋮ → *Desktop site*). Create a project, e.g. `kataria-family`.
 2. **APIs & Services → Library →** search **Google Drive API → Enable**.
-3. **OAuth consent screen** (or *Google Auth Platform*): User type **External**, app name `KATARIA FAMILY`, your email.
+3. **OAuth consent screen** (or *Google Auth Platform*): User type **External**, app name `HINDU ESPORTS`, your email.
    Under **Audience / Test users**, add your own Google email (the one that owns the folder). Leaving it in *Testing* is fine.
    *(In Testing mode Google expires the login every 7 days — if Drive stops working, just tap Reconnect. Publishing the app removes this.)*
 4. **Credentials → Create credentials → OAuth client ID** → type **Web application**.
@@ -94,7 +94,7 @@ How to add accounts:
 
 1. In the Google Cloud **OAuth consent screen → Audience → Test users**, add each extra account's email (needed while the app is in *Testing*).
 2. In the app: **Profile → Google Drive → Add another Google account**, choose the account on Google's screen, allow access.
-   The app creates a `KATARIA Family Storage` folder with the 7 sub-folders inside that account.
+   The app creates a `Hindu Esports Storage` folder with the 7 sub-folders inside that account.
 3. Repeat for each account. Adding the same account twice is refused (it would count its 15 GB twice).
 
 Good to know:
@@ -106,13 +106,13 @@ Good to know:
 - If an account's login expires, files on the other accounts keep working; sign in with the same account again via *Add another Google account* to restore it.
 - Use only accounts you own. Creating many accounts only to get free space can break Google's terms and Google may lock them.
 
-Files are never made public. Family members download through the app, which checks their permissions first.
+Files are never made public. Clan members download through the app, which checks their permissions first.
 
 ## Part 4 — Install on your Android phone
 
 1. Open your Render address in **Chrome**.
-2. Tap **⋮ → Install app** (or **Add to Home screen**). The KATARIA FAMILY icon appears on your home screen and opens full-screen.
-3. Sign up → **Create a family** → **Profile → Invitations** to create a code/link and send it to relatives via WhatsApp/SMS.
+2. Tap **⋮ → Install app** (or **Add to Home screen**). The HINDU ESPORTS icon appears on your home screen and opens full-screen.
+3. Sign up → **Create a clan** → **Profile → Invitations** to create a code/link and send it to relatives via WhatsApp/SMS.
 4. Turn on notifications in **Profile → App Settings** if you want them.
 
 *Limits:* this is a PWA, not an APK. The Android icon/name come from the web manifest. A real APK would require a build tool

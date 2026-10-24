@@ -70,6 +70,8 @@ const SECTION_NAMES = { general: 'General Clan Chat', daily: 'Daily Discussion',
 // One-time tidy-up: existing default rooms that still carry the old family names get the new clan names (renamed rooms are left alone).
 const OLD_ROOM_NAMES = { general: 'General Family Chat', events: 'Family Events', planning: 'Family Planning', shopping: 'Shopping Chat' };
 for (const [t, old] of Object.entries(OLD_ROOM_NAMES)) if (SECTION_NAMES[t] !== old) q.run('UPDATE rooms SET name=? WHERE type=? AND name=?', SECTION_NAMES[t], t, old);
+// …and the original sample name of the family space becomes the clan's name (it can be changed any time in Clan settings).
+q.run("UPDATE families SET name='Hindu Esports' WHERE name='Kataria Family'");
 function ensureFamilyRooms(fid) {
   for (const t of SECTION_TYPES) if (!q.get('SELECT 1 FROM rooms WHERE family_id=? AND type=?', fid, t)) q.run('INSERT INTO rooms(id,family_id,type,name,created_at) VALUES(?,?,?,?,?)', uid(), fid, t, SECTION_NAMES[t], now());
 }

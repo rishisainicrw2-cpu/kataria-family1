@@ -56,7 +56,7 @@ function startMock(port) {
     const p = u.pathname;
     try {
       // ---- control channel for tests ----
-      if (p === '/__ctl') { const b = JSON.parse((await readBody(req)).toString() || '{}'); if (b.reset) reset(); for (const k of ['mode', 'rateLimitNext', 'rootWritable']) if (k in b) st[k] = b[k]; if (b.revoke) for (const v of st.refreshTokens.values()) v.revoked = true; if (b.limit) st.limits[b.limit.acct] = b.limit.bytes; if (b.revokeAcct) for (const v of st.refreshTokens.values()) if (v.account === b.revokeAcct) v.revoked = true; if (b.plant) { const id = newId(); st.files.set(id, { id, name: b.plant.name, mimeType: 'application/octet-stream', parents: [b.plant.parent], data: Buffer.from(b.plant.data, 'base64'), trashed: false, owner: MAIN }); } return send(res, 200, { ok: true }); }
+      if (p === '/__ctl') { const b = JSON.parse((await readBody(req)).toString() || '{}'); if (b.reset) reset(); for (const k of ['mode', 'rateLimitNext', 'rootWritable']) if (k in b) st[k] = b[k]; if (b.revoke) for (const v of st.refreshTokens.values()) v.revoked = true; if (b.plantFolder) { const id = newId(); st.files.set(id, { id, name: b.plantFolder.name, mimeType: FOLDER, parents: [b.plantFolder.parent], trashed: false, owner: MAIN }); } if (b.renameFile) for (const f of st.files.values()) if (f.name === b.renameFile.from) f.name = b.renameFile.to; if (b.limit) st.limits[b.limit.acct] = b.limit.bytes; if (b.revokeAcct) for (const v of st.refreshTokens.values()) if (v.account === b.revokeAcct) v.revoked = true; if (b.plant) { const id = newId(); st.files.set(id, { id, name: b.plant.name, mimeType: 'application/octet-stream', parents: [b.plant.parent], data: Buffer.from(b.plant.data, 'base64'), trashed: false, owner: MAIN }); } return send(res, 200, { ok: true }); }
       if (p === '/__state') return send(res, 200, {
         files: [...st.files.values()].map(f => ({ id: f.id, name: f.name, mimeType: f.mimeType, parents: f.parents, size: f.data ? f.data.length : 0, trashed: f.trashed, owner: f.owner, data: f.data ? f.data.toString('base64') : undefined })),
         log: st.log, apiCalls: st.apiCalls, refreshTokens: [...st.refreshTokens.keys()], revoked: [...st.refreshTokens].filter(([, v]) => v.revoked).map(([k]) => k), accessTokens: [...st.access.keys()], tokens: [...st.refreshTokens].map(([token, v]) => ({ token, account: v.account, revoked: v.revoked })),
@@ -132,6 +132,7 @@ function startMock(port) {
           const f = st.files.get(fm[1]);
           if (!f || f.owner !== acct) return send(res, 404, { error: { code: 404, message: 'File not found: ' + fm[1], errors: [{ reason: 'notFound' }] } });
           if (req.method === 'DELETE') { st.files.delete(f.id); res.writeHead(204); return res.end(); }
+          if (req.method === 'PATCH') { const nb = JSON.parse((await readBody(req)).toString() || '{}'); if (nb.name) f.name = nb.name; return send(res, 200, { id: f.id, name: f.name }); }
           if (u.searchParams.get('alt') === 'media') {
             const range = (req.headers.range || '').match(/^bytes=(\d+)-(\d*)$/);
             if (range) {

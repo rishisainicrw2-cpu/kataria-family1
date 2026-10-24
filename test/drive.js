@@ -84,6 +84,10 @@ const upload = (c, category, name, bytes, mime, extra = {}) => {
   let up = await upload(ravi, 'memories', 'a.png', Buffer.from('x'), 'image/png');
   check('upload refused with a clear message (no other storage used)', up.status === 503 && /not connected/i.test(up.data.error), up);
 
+  // Folders made before the clan rebrand must be RENAMED in place (same folder, same files), never duplicated.
+  await ctl({ plantFolder: { name: 'Family Memories', parent: ROOT_ID } }); await ctl({ plantFolder: { name: 'Family Plans', parent: ROOT_ID } });
+  const legacy = (await mstate()).files.filter(f => ['Family Memories', 'Family Plans'].includes(f.name));
+
   section('B. OAuth connection (owner only)');
   const cn = await asha.get('/api/drive/connect');
   check('connect redirects to Google consent', cn.status === 302 && cn.location.startsWith(mock.url + '/auth?'), cn.location);
@@ -109,7 +113,9 @@ const upload = (c, category, name, bytes, mime, extra = {}) => {
   let ms = await mstate();
   const subs = ms.files.filter(f => f.parents.includes(ROOT_ID) && f.mimeType === 'application/vnd.google-apps.folder');
   check('all 7 category folders exist under the EXACT root folder', subs.length === 7, subs.map(s => s.name));
-  check('folder names match the specification', ['Family Chat Media', 'Family Photos and Videos', 'Family Plans', 'Family Events', 'Family Memories', 'Shared Documents', 'Shopping and Other Files'].every(n => subs.some(s => s.name === n)));
+  check('folder names match the specification', ['Clan Chat Media', 'Clan Photos and Videos', 'Clan Match Plans', 'Clan Events', 'Clan Highlights', 'Shared Documents', 'Gear and Other Files'].every(n => subs.some(s => s.name === n)));
+  check('an old "Family Memories" folder was renamed in place to "Clan Highlights" (same folder, no duplicate)', ms.files.some(f => f.id === legacy.find(l => l.name === 'Family Memories').id && f.name === 'Clan Highlights') && !ms.files.some(f => f.name === 'Family Memories'), legacy);
+  check('…and "Family Plans" became "Clan Match Plans"', ms.files.some(f => f.id === legacy.find(l => l.name === 'Family Plans').id && f.name === 'Clan Match Plans') && !ms.files.some(f => f.name === 'Family Plans'));
   const n1 = ms.files.length;
   await asha.get('/api/drive/status'); await asha.post('/api/drive/setup');
   ms = await mstate();
@@ -121,9 +127,9 @@ const upload = (c, category, name, bytes, mime, extra = {}) => {
   up = await upload(ravi, 'memories', 'diwali.jpg', photo, 'image/jpeg', { caption: 'Diwali 2026' });
   check('member uploads a photo to Memories', up.status === 200 && up.data.name === 'diwali.jpg', up);
   ms = await mstate();
-  const mem = ms.files.find(f => f.name === 'Family Memories' && f.parents.includes(ROOT_ID));
+  const mem = ms.files.find(f => f.name === 'Clan Highlights' && f.parents.includes(ROOT_ID));
   const stored = ms.files.find(f => f.name === 'diwali.jpg');
-  check('file landed in "Family Memories" under the root folder', stored && stored.parents[0] === mem.id, stored);
+  check('file landed in "Clan Highlights" under the root folder', stored && stored.parents[0] === mem.id, stored);
   check('stored bytes are identical to what was uploaded', stored && Buffer.from(stored.data, 'base64').equals(photo));
   const docUp = await upload(asha, 'documents', 'passport-copy.pdf', Buffer.from('%PDF-1.4 fake'), 'application/pdf');
   const docFolder = (await mstate()).files.find(f => f.name === 'Shared Documents');

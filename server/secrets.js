@@ -15,7 +15,7 @@ function sealBytes(buf) {
   return Buffer.concat([MAGIC, iv, c.getAuthTag(), ct]);
 }
 function openBytes(buf) {
-  if (buf.length < 33 || !buf.subarray(0, 4).equals(MAGIC)) throw new Error('not a KATARIA backup file');
+  if (buf.length < 33 || !buf.subarray(0, 4).equals(MAGIC)) throw new Error('not a HINDU ESPORTS backup file');
   const d = crypto.createDecipheriv('aes-256-gcm', bkey, buf.subarray(4, 16)); d.setAuthTag(buf.subarray(16, 32));
   try { return Buffer.concat([d.update(buf.subarray(32)), d.final()]); }
   catch { throw new Error('backup cannot be decrypted — SECRET_KEY is different from the one that created it'); }

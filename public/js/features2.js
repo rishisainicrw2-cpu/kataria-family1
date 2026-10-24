@@ -92,7 +92,7 @@ KF.views.settings = async view => {
 function applyChatBg() { const bg = KF.state.me?.prefs?.chatBg; if (bg) document.documentElement.style.setProperty('--chat-bg', bg); else document.documentElement.style.removeProperty('--chat-bg'); }
 KF.applyChatBg = applyChatBg;
 
-/* ---------- FAMILY SETTINGS (owner/admin) ---------- */
+/* ---------- CLAN SETTINGS (leader/admin) ---------- */
 KF.views.family = async view => {
   const f = KF.state.family, owner = KF.state.me.role === 'owner';
   if (KF.state.me.role === 'member') { view.innerHTML = '<div class="empty"><div class="big">🔒</div>Only the clan leader or administrators can change clan settings.</div>'; return; }

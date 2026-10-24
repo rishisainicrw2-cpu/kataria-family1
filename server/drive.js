@@ -1,7 +1,7 @@
 // Google Drive integration using the official Drive v3 REST API + OAuth 2.0 (authorization-code flow, offline access).
 // Tokens never leave the server. Refresh tokens are encrypted at rest with SECRET_KEY (AES-256-GCM).
 //
-// POOLED STORAGE: a family has one MAIN Google account (table drive_config — it also holds the database backups) and any number of
+// POOLED STORAGE: a clan has one MAIN Google account (table drive_config — it also holds the database backups) and any number of
 // EXTRA accounts (table drive_extra). Uploads go to whichever account has the most free space; each file remembers its account
 // (files.drive_acct, NULL = main). A "ref" identifies one account: `familyId` for the main one, `familyId#accountId` for an extra.
 const crypto = require('crypto');
@@ -17,8 +17,13 @@ const DRIVE = process.env.KF_DRIVE_API || 'https://www.googleapis.com/drive/v3';
 const DRIVE_UPLOAD = process.env.KF_DRIVE_UPLOAD_API || 'https://www.googleapis.com/upload/drive/v3';
 const SCOPE = 'https://www.googleapis.com/auth/drive'; // needed to use a pre-existing folder by ID (drive.file cannot see it)
 const CATEGORY_FOLDERS = {
+  chat: 'Clan Chat Media', photos: 'Clan Photos and Videos', plans: 'Clan Match Plans', events: 'Clan Events',
+  memories: 'Clan Highlights', documents: 'Shared Documents', shopping: 'Gear and Other Files',
+};
+// The names used before the clan rebrand. Existing folders carrying these names are RENAMED in place (never duplicated), so old files stay where they are.
+const LEGACY_FOLDERS = {
   chat: 'Family Chat Media', photos: 'Family Photos and Videos', plans: 'Family Plans', events: 'Family Events',
-  memories: 'Family Memories', documents: 'Shared Documents', shopping: 'Shopping and Other Files',
+  memories: 'Family Memories', shopping: 'Shopping and Other Files',
 };
 const EXTRA_ROOT_NAME = 'Hindu Esports Storage';
 // Space kept free on the MAIN account so the (tiny) database backups can never fail because photos filled it up.
@@ -103,7 +108,7 @@ async function about(r, tries) {
 }
 
 // Verify the root folder is reachable & writable, then create the 7 subfolders only if they do not already exist.
-// MAIN account: the owner-supplied folder is used. EXTRA accounts: a folder "KATARIA Family Storage" is created in that account's My Drive.
+// MAIN account: the owner-supplied folder is used. EXTRA accounts: a folder "Hindu Esports Storage" is created in that account's My Drive.
 async function setup(r) {
   const { acct } = split(r);
   const row = getRow(r);
@@ -124,9 +129,8 @@ async function setup(r) {
   if (!meta.capabilities?.canAddChildren) throw new HttpError(409, `The connected account can see "${meta.name}" but cannot add files to it. Ask for Editor access.`, 'drive_folder_readonly');
   const ids = {};
   for (const [cat, name] of Object.entries(CATEGORY_FOLDERS)) {
-    const x = await driveFetch(r, `${DRIVE}/files?q=${encodeURIComponent(`'${root}' in parents and name='${esc(name)}' and mimeType='application/vnd.google-apps.folder' and trashed=false`)}&fields=files(id)&supportsAllDrives=true&includeItemsFromAllDrives=true`);
-    const found = (await x.json()).files?.[0];
-    if (found) ids[cat] = found.id;
+    const found = await findOrRenameFolder(r, root, name, LEGACY_FOLDERS[cat]);
+    if (found) ids[cat] = found;
     else {
       const c = await driveFetch(r, `${DRIVE}/files?fields=id&supportsAllDrives=true`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, mimeType: 'application/vnd.google-apps.folder', parents: [root] }) });
       ids[cat] = (await c.json()).id;
@@ -134,6 +138,19 @@ async function setup(r) {
   }
   setRow(r, { root_folder_id: root, folder_ids: JSON.stringify(ids), status: 'connected' });
   return { rootName: meta.name, folders: Object.values(CATEGORY_FOLDERS) };
+}
+
+const FOLDER_MIME = 'application/vnd.google-apps.folder';
+async function findFolder(r, parent, name) {
+  const x = await driveFetch(r, `${DRIVE}/files?q=${encodeURIComponent(`'${parent}' in parents and name='${esc(name)}' and mimeType='${FOLDER_MIME}' and trashed=false`)}&fields=files(id)&supportsAllDrives=true&includeItemsFromAllDrives=true`);
+  return (await x.json()).files?.[0]?.id;
+}
+// Find the folder called `name`; failing that, find the one with the pre-rebrand `legacyName` and rename it (if renaming is refused it is simply used as it is).
+async function findOrRenameFolder(r, parent, name, legacyName) {
+  const found = await findFolder(r, parent, name); if (found) return found;
+  const old = legacyName && await findFolder(r, parent, legacyName); if (!old) return undefined;
+  try { await driveFetch(r, `${DRIVE}/files/${old}?supportsAllDrives=true`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) }); } catch (_) {}
+  return old;
 }
 
 async function extraStatuses(familyId) {
@@ -293,9 +310,8 @@ async function remove(r, driveId) {
 }
 
 // Find a sub-folder by name under `parent`, creating it only if it does not already exist.
-async function ensureFolder(r, parent, name) {
-  const x = await driveFetch(r, `${DRIVE}/files?q=${encodeURIComponent(`'${parent}' in parents and name='${esc(name)}' and mimeType='application/vnd.google-apps.folder' and trashed=false`)}&fields=files(id)&supportsAllDrives=true&includeItemsFromAllDrives=true`);
-  const found = (await x.json()).files?.[0]; if (found) return found.id;
+async function ensureFolder(r, parent, name, legacyName) {
+  const found = await findOrRenameFolder(r, parent, name, legacyName); if (found) return found;
   const c = await driveFetch(r, `${DRIVE}/files?fields=id&supportsAllDrives=true`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, mimeType: 'application/vnd.google-apps.folder', parents: [parent] }) });
   return (await c.json()).id;
 }

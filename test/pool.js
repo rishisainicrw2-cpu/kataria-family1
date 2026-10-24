@@ -137,7 +137,7 @@ const ownerOf = async name => (await mstate()).files.find(f => f.name === name)?
   check('it went to the account with the most room (not the 3 GB one, not the main one that keeps backup headroom)', await ownerOf('diwali.jpg') === CARO, await ownerOf('diwali.jpg'));
   ms = await mstate();
   const stored = ms.files.find(f => f.name === 'diwali.jpg'), parent = ms.files.find(f => f.id === stored.parents[0]);
-  check('it sits in that account\'s "Family Memories" folder', parent.name === 'Family Memories' && parent.owner === CARO, parent);
+  check('it sits in that account\'s "Clan Highlights" folder', parent.name === 'Clan Highlights' && parent.owner === CARO, parent);
   let dl = await asha.rawGet(`/api/files/${up.data.id}/content`);
   check('another member downloads identical bytes (fetched from the right account)', dl.status === 200 && dl.data.equals(photo), dl.status);
   dl = await asha.rawGet(`/api/files/${up.data.id}/content`, { Range: 'bytes=10-19' });

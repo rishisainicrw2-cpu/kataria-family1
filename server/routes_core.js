@@ -57,7 +57,7 @@ route('POST', '/api/auth/reset-request', async ctx => {
     const code = makeCode();
     q.run('UPDATE users SET reset_hash=?, reset_expires=? WHERE id=?', L.sha(code), now() + 30 * 60000, u.id);
     console.log(`[password reset] code for ${email}: ${code} (valid 30 min)`);
-    // No email service is used. Family owners/admins see the code in-app so they can pass it on securely.
+    // No email service is used. Clan leaders/admins see the code in-app so they can pass it on securely.
     const fam = q.get('SELECT family_id FROM memberships WHERE user_id=?', u.id);
     if (fam) {
       const admins = q.all("SELECT user_id FROM memberships WHERE family_id=? AND role IN ('owner','admin') AND user_id!=?", fam.family_id, u.id).map(r => r.user_id);

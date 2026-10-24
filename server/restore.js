@@ -4,7 +4,7 @@
 // Safety rules:
 //  * A database that already contains users is NEVER overwritten.
 //  * If a restore key is set but the restore fails (Drive unreachable, token revoked, wrong SECRET_KEY) the server REFUSES TO START
-//    instead of quietly starting empty — starting empty could let the family create a new, diverging history.
+//    instead of quietly starting empty — starting empty could let the clan create a new, diverging history.
 //  * "No backup found yet" is not a failure (first ever deploy): the server starts normally.
 const fs = require('fs');
 const zlib = require('zlib');
@@ -12,7 +12,8 @@ const { DatabaseSync } = require('node:sqlite');
 const cfg = require('./config');
 const { dec, openBytes } = require('./secrets');
 
-const BACKUP_FOLDER = 'KATARIA App Backups (do not delete)';
+const BACKUP_FOLDER = 'Hindu Esports App Backups (do not delete)';
+const BACKUP_FOLDER_LEGACY = 'KATARIA App Backups (do not delete)';   // name used before the rebrand: still found (and renamed by the next backup)
 const NAME_RE = /^kataria-\d{8}-\d{6}-\d{3}\.kfb$/;   // kataria-YYYYMMDD-HHMMSS-mmm.kfb (UTC; sorts oldest → newest)
 const G_TOKEN = process.env.KF_GOOGLE_TOKEN_URL || 'https://oauth2.googleapis.com/token';
 const DRIVE = process.env.KF_DRIVE_API || 'https://www.googleapis.com/drive/v3';
@@ -56,7 +57,8 @@ async function restoreIfNeeded(log = console.log) {
   const auth = { Authorization: 'Bearer ' + (await tok.json()).access_token };
   const list = async q => (await (await call(`${DRIVE}/files?q=${encodeURIComponent(q)}&fields=files(id,name)&pageSize=100&supportsAllDrives=true&includeItemsFromAllDrives=true`, { headers: auth }, 'Drive listing')).json()).files || [];
 
-  const folders = await list(`'${cred.root}' in parents and name='${esc(BACKUP_FOLDER)}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
+  const inRoot = name => list(`'${cred.root}' in parents and name='${esc(name)}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
+  let folders = await inRoot(BACKUP_FOLDER); if (!folders.length) folders = await inRoot(BACKUP_FOLDER_LEGACY);
   if (!folders.length) { log('[restore] no backup folder yet (first deployment?) — starting with a new database'); return 'no-backup-yet'; }
   const files = (await list(`'${folders[0].id}' in parents and mimeType!='application/vnd.google-apps.folder' and trashed=false`)).filter(f => NAME_RE.test(f.name)).sort((a, b) => b.name.localeCompare(a.name));
   if (!files.length) { log('[restore] backup folder is empty — starting with a new database'); return 'no-backup-yet'; }
@@ -86,4 +88,4 @@ async function restoreIfNeeded(log = console.log) {
   throw new Fatal('Backups exist in Drive but none could be restored: ' + problems.slice(0, 3).join('; '));
 }
 
-module.exports = { restoreIfNeeded, BACKUP_FOLDER, NAME_RE, dbHasUsers };
+module.exports = { restoreIfNeeded, BACKUP_FOLDER, BACKUP_FOLDER_LEGACY, NAME_RE, dbHasUsers };

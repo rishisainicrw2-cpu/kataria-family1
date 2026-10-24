@@ -1,4 +1,4 @@
-// Automatic, encrypted backups of the SQLite database to the family's Google Drive folder.
+// Automatic, encrypted backups of the SQLite database to the clan's Google Drive folder.
 // Why: free hosts (e.g. Render free) wipe the local disk on restart/spin-down. Drive is the durable copy.
 //   snapshot (VACUUM INTO) → gzip → AES-256-GCM (key derived from SECRET_KEY) → upload → keep the newest KEEP files.
 // Backups are skipped while the database has no users, so an empty database can never displace real backups.
@@ -9,7 +9,7 @@ const cfg = require('./config');
 const { db, q, stats } = require('./db');
 const drive = require('./drive');
 const { enc, dec, sealBytes } = require('./secrets');
-const { BACKUP_FOLDER, NAME_RE } = require('./restore');
+const { BACKUP_FOLDER, BACKUP_FOLDER_LEGACY, NAME_RE } = require('./restore');
 
 const KEEP = +process.env.BACKUP_KEEP || 8;
 const MIN_INTERVAL_MS = +process.env.BACKUP_MIN_INTERVAL_MS || 120000;
@@ -33,7 +33,7 @@ async function run() {
     db.exec(`VACUUM INTO '${tmp.replace(/'/g, "''")}'`);
     const sealed = sealBytes(zlib.gzipSync(fs.readFileSync(tmp)));
     const root = q.get('SELECT root_folder_id FROM drive_config WHERE family_id=?', fid).root_folder_id;
-    const folder = await drive.ensureFolder(fid, root, BACKUP_FOLDER);
+    const folder = await drive.ensureFolder(fid, root, BACKUP_FOLDER, BACKUP_FOLDER_LEGACY);
     const name = `kataria-${stamp()}.kfb`;
     await drive.uploadTo(fid, folder, { filename: name, mime: 'application/octet-stream', data: sealed });
     const all = (await drive.listFiles(fid, folder)).filter(f => NAME_RE.test(f.name)).sort((a, b) => b.name.localeCompare(a.name));

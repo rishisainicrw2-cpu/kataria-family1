@@ -48,7 +48,7 @@ class Client {
 }
 const ctl = b => fetch(mock.url + '/__ctl', { method: 'POST', body: JSON.stringify(b) });
 const mstate = () => fetch(mock.url + '/__state').then(r => r.json());
-const backupsIn = async () => { const st = await mstate(); const folder = st.files.find(f => f.name === 'KATARIA App Backups (do not delete)'); return { folder, files: folder ? st.files.filter(f => f.parents.includes(folder.id)) : [] }; };
+const backupsIn = async () => { const st = await mstate(); const folder = st.files.find(f => f.name === 'Hindu Esports App Backups (do not delete)'); return { folder, files: folder ? st.files.filter(f => f.parents.includes(folder.id)) : [] }; };
 
 let passed = 0, failed = 0; const failures = [];
 function check(name, cond, detail) { if (cond) { passed++; console.log('  ✓', name); } else { failed++; failures.push(name); console.log('  ✗', name, detail !== undefined ? '→ ' + JSON.stringify(detail).slice(0, 400) : ''); } }
@@ -188,6 +188,21 @@ const upload = (c, name, bytes) => { const fd = new FormData(); fd.append('categ
   const z = new Client(); await z.post('/api/auth/register', { name: 'Z', email: 'z@example.com', password: PW }); await z.post('/api/family', { name: 'F4' }); await connectDrive(z);
   const off = await z.post('/api/drive/backup');
   check('BACKUP_TO_DRIVE=off disables backups with a clear message', off.status === 409 && /switched off/i.test(off.data.error), off);
+
+  section('I. Backups made before the rebrand (old folder name) are still found');
+  await stop(); wipeDisk(); await ctl({ reset: true });
+  b = await boot();
+  const q5 = new Client(); await q5.post('/api/auth/register', { name: 'Q', email: 'q@example.com', password: PW }); await q5.post('/api/family', { name: 'F5' }); await connectDrive(q5);
+  check('a backup is made into the new-named folder', (await q5.post('/api/drive/backup')).status === 200 && (await backupsIn()).files.length === 1, (await backupsIn()).files.length);
+  await ctl({ renameFile: { from: 'Hindu Esports App Backups (do not delete)', to: 'KATARIA App Backups (do not delete)' } });   // as it was before the rebrand
+  const key5 = (await q5.post('/api/drive/restore-key', { password: PW })).data.key;
+  await stop('SIGKILL'); wipeDisk();
+  b = await boot({ DRIVE_RESTORE_KEY: key5 });
+  check('a wiped server restores from the OLD-named backup folder', b.up && /restored:kataria-/.test(b.out), b.out.slice(0, 400));
+  const q6 = new Client(); await q6.post('/api/auth/login', { email: 'q@example.com', password: PW });
+  check('the next backup renames the old folder (no second folder, old backup kept)', (await q6.post('/api/drive/backup')).status === 200, null);
+  const stF = (await mstate()).files;
+  check('…old name gone, one new-named folder holding both backups', !stF.some(f => f.name === 'KATARIA App Backups (do not delete)') && stF.filter(f => f.name === 'Hindu Esports App Backups (do not delete)').length === 1 && (await backupsIn()).files.length === 2, (await backupsIn()).files.length);
 
   await stop(); await mock.close();
   fs.rmSync(path.dirname(DATA), { recursive: true, force: true });

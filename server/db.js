@@ -135,7 +135,7 @@ CREATE TABLE IF NOT EXISTS drive_config(
 CREATE TABLE IF NOT EXISTS push_subs(
   endpoint TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, sub TEXT NOT NULL);
 
--- Additional Google accounts pooled into the family's storage. The first account stays in drive_config (it also holds the DB backups).
+-- Additional Google accounts pooled into the clan's storage. The first account stays in drive_config (it also holds the DB backups).
 CREATE TABLE IF NOT EXISTS drive_extra(
   id TEXT PRIMARY KEY, family_id TEXT NOT NULL REFERENCES families(id) ON DELETE CASCADE, refresh_enc TEXT NOT NULL, account TEXT,
   root_folder_id TEXT, folder_ids TEXT DEFAULT '{}', status TEXT DEFAULT 'connected', connected_at INTEGER);
