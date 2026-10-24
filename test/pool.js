@@ -109,8 +109,8 @@ const ownerOf = async name => (await mstate()).files.find(f => f.name === name)?
   check('status lists the extra account, ready', st.accounts.length === 1 && st.accounts[0].account === BOB && st.accounts[0].folderOk && st.accounts[0].status === 'connected', st.accounts);
   check('combined storage = both accounts together', st.pool.accounts === 2 && st.pool.limit === 2 * FULL, st.pool);
   let ms = await mstate();
-  const bobRoot = ms.files.find(f => f.owner === BOB && f.name === 'KATARIA Family Storage');
-  check('a "KATARIA Family Storage" folder was created in the NEW account', !!bobRoot);
+  const bobRoot = ms.files.find(f => f.owner === BOB && f.name === 'Hindu Esports Storage');
+  check('a "Hindu Esports Storage" folder was created in the NEW account', !!bobRoot);
   check('…with the 7 category folders inside it', ms.files.filter(f => f.owner === BOB && bobRoot && f.parents.includes(bobRoot.id) && f.mimeType === 'application/vnd.google-apps.folder').length === 7);
   check('the main account\'s folder was left alone (still its 7 folders, nothing of bob\'s inside)', ms.files.filter(f => f.parents.includes(ROOT_ID)).length === 7 && ms.files.filter(f => f.parents.includes(ROOT_ID)).every(f => f.owner === MAIN));
   const bobId = st.accounts[0].id;

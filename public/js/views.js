@@ -1,6 +1,6 @@
-/* Welcome, login, registration, create/join family, and the Home dashboard */
+/* Welcome, login, registration, create/join clan, and the Home dashboard */
 const authEl = () => $('#auth');
-const brand = '<img class="logo" src="/assets/icon-512.png" alt="KATARIA FAMILY logo"><h1>KATARIA <span>FAMILY</span></h1><div class="tag">Together as One ✦</div>';
+const brand = '<img class="logo" src="/assets/icon-512.png" alt="Hindu Esports"><h1 class="sr">HINDU ESPORTS</h1><div class="tag">Together as One ✦</div>';
 
 KF.showAuth = (mode = 'welcome', note = '') => {
   $('#boot').classList.add('hidden'); $('#app').classList.add('hidden');
@@ -10,7 +10,7 @@ KF.showAuth = (mode = 'welcome', note = '') => {
   if (params.get('invite')) sessionStorage.setItem('kf_invite', inviteCode);
   if (mode === 'welcome') {
     el.innerHTML = `${brand}<div class="panel gap">
-      <p class="center" style="margin:0;color:#c9d2ff">A private space for your family to chat, plan and keep memories.</p>
+      <p class="center" style="margin:0;color:#ffd9bf">A private space for your clan to chat, plan matches and share highlights.</p>
       <button class="btn gold block" data-m="register">Create account</button>
       <button class="btn ghost block" style="color:#fff;border-color:rgba(255,255,255,.3)" data-m="login">I already have an account</button>
       ${inviteCode ? `<p class="small center" style="color:var(--gold-l);margin:0">You were invited with code <b>${esc(inviteCode)}</b>. Register or log in to join.</p>` : ''}</div>`;
@@ -40,7 +40,7 @@ KF.showAuth = (mode = 'welcome', note = '') => {
     };
   } else if (mode === 'reset') {
     el.innerHTML = `${brand}<form class="panel" novalidate>
-      <p class="small" style="margin-top:0;color:#c9d2ff">Enter your email. If your family owner runs the server, they will receive a one-time reset code you can ask them for (no email service is required).</p>
+      <p class="small" style="margin-top:0;color:#ffd9bf">Enter your email. If your clan leader runs the server, they will receive a one-time reset code you can ask them for (no email service is required).</p>
       <label>Email</label><input name="email" type="email" required>
       <div class="err"></div>
       <button class="btn gold block" style="margin-top:8px">Request reset code</button>
@@ -51,7 +51,7 @@ KF.showAuth = (mode = 'welcome', note = '') => {
     const form = $('form', el), err = $('.err', form);
     form.onsubmit = async e => {
       e.preventDefault();
-      try { await api('/auth/reset-request', { method: 'POST', body: { email: form.email.value } }); err.style.color = '#b6f2d2'; err.textContent = 'If that account exists, a reset code was created. Get it from your family owner (server console), then enter it below.'; $('[data-step2]', form).classList.remove('hidden'); }
+      try { await api('/auth/reset-request', { method: 'POST', body: { email: form.email.value } }); err.style.color = '#b6f2d2'; err.textContent = 'If that account exists, a reset code was created. Get it from your clan leader (server console), then enter it below.'; $('[data-step2]', form).classList.remove('hidden'); }
       catch (ex) { err.textContent = ex.message; }
     };
     $('[data-do]', form).onclick = async () => {
@@ -63,10 +63,10 @@ KF.showAuth = (mode = 'welcome', note = '') => {
     el.innerHTML = `${brand}<div class="panel gap">
       <h2 style="color:#fff">Welcome, ${esc(KF.state.me.name.split(' ')[0])}</h2>
       <form data-join><label>Join with an invitation code</label><input name="code" value="${esc(code)}" placeholder="e.g. K7M2-QX9P" autocapitalize="characters" required>
-        <button class="btn gold block" style="margin-top:8px">Join family</button></form>
+        <button class="btn gold block" style="margin-top:8px">Join clan</button></form>
       <div class="center small">— or —</div>
-      <form data-create><label>Create a new family space</label><input name="name" placeholder="e.g. Kataria Family" maxlength="60" required>
-        <button class="btn block" style="margin-top:8px;background:var(--blue)">Create family</button></form>
+      <form data-create><label>Create a new clan space</label><input name="name" placeholder="e.g. Hindu Esports" maxlength="60" required>
+        <button class="btn block" style="margin-top:8px;background:var(--blue)">Create clan</button></form>
       <div class="err"></div>
       <p class="center small"><a href="#" data-out>Log out</a></p></div>`;
     const err = $('.err', el);
@@ -85,21 +85,21 @@ KF.views.home = async (view) => {
   const [d, ann] = await Promise.all([api('/dashboard'), Promise.resolve(null)]);
   const f = KF.state.family, me = KF.state.me;
   const hr = new Date().getHours(), greet = hr < 12 ? 'Good morning' : hr < 18 ? 'Good afternoon' : 'Good evening';
-  const quick = [['chat', 'Start a Chat', '#/chats'], ['plans', 'Family Plan', 'plan:new'], ['cal', 'Add Event', 'event:new'],
-    ['photo', 'Upload Photo', 'photo:new'], ['cart', 'Shopping List', '#/shopping'], ['money', 'Add Expense', 'expense:new']];
+  const quick = [['chat', 'Start a Chat', '#/chats'], ['plans', 'Match Plan', 'plan:new'], ['cal', 'Add Event', 'event:new'],
+    ['photo', 'Upload Photo', 'photo:new'], ['cart', 'Gear List', '#/shopping'], ['money', 'Add Expense', 'expense:new']];
   view.innerHTML = `<div class="gap fade">
     <div class="card" style="background:linear-gradient(135deg,var(--blue),var(--blue-d) 60%,var(--ink));color:#fff;border:0">
-      <div class="row"><img src="/assets/icon-192.png" width="52" height="52" style="border-radius:14px" alt="">
+      <div class="row"><img src="/assets/icon-192.png" width="56" height="56" style="border-radius:14px" alt="">
         <div class="grow"><div style="opacity:.8;font-size:.85rem">${greet}, ${esc(me.name.split(' ')[0])} ✦</div>
         <h2 style="color:#fff">${esc(f.name)}</h2><div class="small" style="color:var(--gold-l)">Together as One ✦</div></div></div></div>
     ${d.announcements.length ? `<div class="card" style="border-color:var(--gold)"><h3>📢 Announcements</h3>${d.announcements.map(a => `<div class="small" style="padding:4px 0"><b>${esc(a.title)}</b><div class="muted">${esc(a.body)}</div></div>`).join('')}</div>` : ''}
     <div class="grid2" style="grid-template-columns:repeat(3,1fr)">${quick.map(q => `<button class="quick" data-q="${q[2]}"><span class="q">${icon(q[0])}</span>${q[1]}</button>`).join('')}</div>
     <div class="card"><h3>Online now</h3>${d.online.length ? `<div class="row wrap">${d.online.map(u => `<div class="center small" style="width:62px">${avatar(u)}<div class="small" style="margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(u.name.split(' ')[0])}</div></div>`).join('')}</div>` : '<div class="muted small">No one else is online right now.</div>'}</div>
-    <div class="card"><h3>Recent messages</h3>${d.messages.length ? `<div class="list">${d.messages.map(m => `<a href="#/room/${m.roomId}" style="text-decoration:none;color:inherit;display:flex;gap:10px">${avatar(member(m.userId), 'sm')}<div class="grow"><div class="small muted">${esc(m.roomName)} · ${fmtDT(m.createdAt)}</div><div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><b>${esc(member(m.userId)?.name.split(' ')[0] || '')}:</b> ${esc(m.text || '📎 attachment')}</div></div></a>`).join('')}</div>` : '<div class="empty"><div class="big">💬</div>No messages yet. Say hello to your family!</div>'}</div>
+    <div class="card"><h3>Recent messages</h3>${d.messages.length ? `<div class="list">${d.messages.map(m => `<a href="#/room/${m.roomId}" style="text-decoration:none;color:inherit;display:flex;gap:10px">${avatar(member(m.userId), 'sm')}<div class="grow"><div class="small muted">${esc(m.roomName)} · ${fmtDT(m.createdAt)}</div><div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><b>${esc(member(m.userId)?.name.split(' ')[0] || '')}:</b> ${esc(m.text || '📎 attachment')}</div></div></a>`).join('')}</div>` : '<div class="empty"><div class="big">💬</div>No messages yet. Say hello to your clan!</div>'}</div>
     <div class="card"><h3>Upcoming events &amp; plans</h3>${d.upcoming.length ? `<div class="list">${d.upcoming.map(u => `<a href="#/${u.kind === 'plan' ? 'plan' : 'events'}/${u.id}" style="text-decoration:none;color:inherit;display:flex;justify-content:space-between;gap:8px"><div><b>${esc(u.title)}</b><div class="small muted">${fmtDT(u.startsAt)}${u.location ? ' · ' + esc(u.location) : ''}</div></div><span class="pill ${u.kind === 'plan' ? 'gold' : ''}">${u.kind}</span></a>`).join('')}</div>` : '<div class="empty"><div class="big">📅</div>Nothing scheduled. Add an event or plan.</div>'}</div>
     <div class="card"><h3>My pending tasks</h3>${d.tasks.length ? `<div class="list">${d.tasks.map(t => `<div class="row"><span class="grow">${esc(t.title)}<div class="small muted">${esc(t.planTitle || '')}${t.dueAt ? ' · due ' + fmtDate(t.dueAt) : ''}</div></span></div>`).join('')}</div>` : '<div class="muted small">You have no pending tasks 🎉</div>'}</div>
-    <div class="card"><div class="row"><h3 class="grow" style="margin:0">Recent photos</h3><a href="#/memories" class="small">See all</a></div>
-      ${d.photos.length ? `<div class="gallery" style="margin-top:10px">${d.photos.map(p => `<div class="ph" onclick="location.hash='#/memories'"><img loading="lazy" src="/api/files/${p.id}/thumb" alt="${esc(p.name)}"></div>`).join('')}</div>` : '<div class="empty"><div class="big">📷</div>Upload your first family photo.</div>'}</div>
+    <div class="card"><div class="row"><h3 class="grow" style="margin:0">Recent highlights</h3><a href="#/memories" class="small">See all</a></div>
+      ${d.photos.length ? `<div class="gallery" style="margin-top:10px">${d.photos.map(p => `<div class="ph" onclick="location.hash='#/memories'"><img loading="lazy" src="/api/files/${p.id}/thumb" alt="${esc(p.name)}"></div>`).join('')}</div>` : '<div class="empty"><div class="big">📷</div>Upload your first clan highlight.</div>'}</div>
   </div>`;
   $$('[data-q]', view).forEach(b => b.onclick = () => {
     const q = b.dataset.q;

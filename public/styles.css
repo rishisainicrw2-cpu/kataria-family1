@@ -1,14 +1,14 @@
 :root{
-  --blue:#1f46d6; --blue-d:#10236b; --ink:#05060d; --gold:#e9b949; --gold-l:#ffe29a;
-  --bg:#f4f6fc; --card:#ffffff; --text:#0d1330; --muted:#5d6584; --line:#e1e5f2;
-  --bubble-me:linear-gradient(135deg,#1f46d6,#10236b); --bubble-me-t:#fff;
-  --bubble-o:#ffffff; --bubble-o-t:#0d1330; --chat-bg:#eef1fb;
+  --blue:#f26a0f; --blue-d:#a63a05; --ink:#000000; --gold:#ffb21e; --gold-l:#ffd89a;
+  --bg:#fff7f0; --card:#ffffff; --text:#1c0f06; --muted:#7a5f4d; --line:#f0dccb;
+  --bubble-me:linear-gradient(135deg,#e8590c,#a63a05); --bubble-me-t:#fff;
+  --bubble-o:#ffffff; --bubble-o-t:#1c0f06; --chat-bg:#fff1e5;
   --accent:var(--blue); --danger:#d6334a; --ok:#1f9d63; --radius:18px;
-  --shadow:0 6px 22px rgba(16,35,107,.10); --nav-h:64px;
+  --shadow:0 6px 22px rgba(166,58,5,.10); --nav-h:64px;
 }
 :root[data-theme=dark]{
-  --bg:#05060d; --card:#10142a; --text:#eef1ff; --muted:#9aa3c7; --line:#1f2545;
-  --bubble-o:#171c38; --bubble-o-t:#eef1ff; --chat-bg:#080a18; --shadow:0 6px 22px rgba(0,0,0,.45);
+  --bg:#050505; --card:#121212; --text:#fff4ea; --muted:#b8a090; --line:#2e1b0e;
+  --bubble-o:#1c1511; --bubble-o-t:#fff4ea; --chat-bg:#080604; --shadow:0 6px 22px rgba(0,0,0,.45);
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
@@ -70,7 +70,7 @@ label{display:block;font-size:.83rem;color:var(--muted);margin:10px 0 4px}
 .avatar.sm{width:30px;height:30px;font-size:.8rem}
 .dot{position:absolute;right:0;bottom:0;width:11px;height:11px;border-radius:50%;background:var(--ok);border:2px solid var(--card)}
 .pill{display:inline-block;padding:3px 10px;border-radius:99px;font-size:.74rem;font-weight:600;background:var(--line);color:var(--muted)}
-.pill.upcoming{background:#dfe7ff;color:#1f46d6} .pill.in_progress{background:#fff1cc;color:#8a6200}
+.pill.upcoming{background:#ffe3cf;color:#f26a0f} .pill.in_progress{background:#fff1cc;color:#8a6200}
 .pill.completed{background:#d9f5e6;color:#1f9d63} .pill.cancelled{background:#fde1e5;color:#d6334a}
 .pill.gold{background:var(--gold);color:#1a1403}
 .chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px}
@@ -89,7 +89,7 @@ label{display:block;font-size:.83rem;color:var(--muted);margin:10px 0 4px}
 /* auth / splash */
 .screen{position:fixed;inset:0;z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;
   background:linear-gradient(160deg,var(--blue-d),var(--ink));color:#fff;padding:24px;overflow-y:auto}
-.screen .logo{width:104px;height:104px;border-radius:26px;box-shadow:0 10px 40px rgba(31,70,214,.5)}
+.screen .logo{width:104px;height:104px;border-radius:26px;box-shadow:0 10px 40px rgba(242,106,15,.5)}
 .screen h1{font-size:1.9rem;letter-spacing:2px;margin-top:16px;color:#fff} .screen h1 span{color:var(--gold)}
 .screen .tag{color:var(--gold-l);font-style:italic;margin:6px 0 24px}
 .screen .panel{width:100%;max-width:400px;background:rgba(255,255,255,.07);backdrop-filter:blur(8px);border-radius:22px;padding:20px;
@@ -140,3 +140,18 @@ label{display:block;font-size:.83rem;color:var(--muted);margin:10px 0 4px}
 .gallery .ph{aspect-ratio:1;background:var(--line);border-radius:10px;overflow:hidden;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:2rem}
 .gallery .ph img{width:100%;height:100%;object-fit:cover}
 @media(min-width:700px){.gallery{grid-template-columns:repeat(5,1fr)}}
+
+/* ===== HINDU ESPORTS theme: black + saffron, bold condensed headings ===== */
+h1,h2,h3{font-family:"Roboto Condensed","sans-serif-condensed","Arial Narrow",Impact,system-ui,sans-serif;font-weight:800;letter-spacing:.05em;text-transform:uppercase}
+.card h3{color:var(--blue)}
+:root[data-theme=dark] .card h3{color:var(--gold)}
+:root[data-theme=dark] .card{border-color:rgba(242,106,15,.24);box-shadow:0 0 18px rgba(242,106,15,.07),var(--shadow)}
+#topbar{background:linear-gradient(135deg,var(--blue),var(--blue-d) 55%,#000);border-bottom:2px solid var(--gold);box-shadow:0 2px 16px rgba(242,106,15,.35)}
+#topbar h1{letter-spacing:.05em;font-size:1.05rem}
+.btn{text-transform:uppercase;letter-spacing:.05em;font-weight:800}
+.screen{background:radial-gradient(120% 70% at 50% 0%,rgba(242,106,15,.30),transparent 62%),#000}
+.screen .logo{width:176px;height:176px;border-radius:22px;box-shadow:0 0 56px rgba(242,106,15,.45)}
+.screen h1{font-size:2.1rem;letter-spacing:.14em}
+.screen .tag{font-style:normal;letter-spacing:.22em;text-transform:uppercase;font-size:.78rem}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.quick{border-color:rgba(242,106,15,.28)}

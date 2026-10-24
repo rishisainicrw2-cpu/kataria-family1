@@ -1,6 +1,6 @@
 /* Plans, calendar, events, polls, shopping, expenses, memories */
 KF.actions = {};
-const PLAN_CATS = ['Family trip', 'Birthday party', 'Wedding', 'Family dinner', 'Festival', 'Weekend outing', 'Shopping trip', 'Other'];
+const PLAN_CATS = ['Scrim', 'Tournament', 'Ranked grind', 'Practice', 'Clan meeting', 'Team bonding', 'Streaming', 'Other'];
 const EXP_CATS = ['Groceries', 'Food & dining', 'Travel', 'Bills', 'Shopping', 'Health', 'Education', 'Celebration', 'Other'];
 const can = p => { const me = KF.state.me; return me.role === 'owner' || me.role === 'admin' || (me.perms && me.perms[p]); };
 KF.can = can;
@@ -9,8 +9,8 @@ const done = (scope) => { KF.send({ type: 'changed', scope }); };
 
 /* ---------- PLANS ---------- */
 KF.actions.newPlan = async () => {
-  if (!can('plans')) return toast('You do not have permission to create plans. Ask the family owner.');
-  const v = await formSheet('New family plan', [
+  if (!can('plans')) return toast('You do not have permission to create plans. Ask the clan leader.');
+  const v = await formSheet('New match plan', [
     { name: 'title', label: 'Title', required: true, placeholder: 'Goa trip, Diwali dinner…' },
     { name: 'category', label: 'Category', type: 'select', options: PLAN_CATS },
     { name: 'description', label: 'Description', type: 'textarea' },
@@ -56,9 +56,9 @@ KF.views.plan = async (view, [id]) => {
         <a class="btn small ghost" href="#/room/${p.roomId}" style="text-decoration:none">💬 Discussion</a></div></div>
     <div class="card"><h3>Who's coming</h3><div class="list">${d.participants.map(x => `<div class="row">${avatar(member(x.userId), 'sm')}<span class="grow">${esc(member(x.userId)?.name || 'Former member')}</span><span class="pill">${x.rsvp || 'invited'}</span></div>`).join('')}</div></div>
     <div class="card"><div class="row"><h3 class="grow" style="margin:0">Tasks &amp; checklist</h3><button class="btn small ghost" data-addtask>+ Add</button></div>
-      ${d.tasks.length ? `<div class="list">${d.tasks.map(t => `<label class="row" style="margin:0;color:inherit;font-size:1rem"><input type="checkbox" style="width:22px;height:22px" data-task="${t.id}" ${t.done ? 'checked' : ''}><span class="grow ${t.done ? 'muted' : ''}" style="${t.done ? 'text-decoration:line-through' : ''}">${esc(t.title)}<div class="small muted">${t.assigneeId ? '👤 ' + esc(member(t.assigneeId)?.name || '') : 'Unassigned'}${t.dueAt ? ' · due ' + fmtDate(t.dueAt) : ''}</div></span></label>`).join('')}</div>` : '<div class="muted small" style="margin-top:6px">No tasks yet. Assign responsibilities to family members.</div>'}</div>
+      ${d.tasks.length ? `<div class="list">${d.tasks.map(t => `<label class="row" style="margin:0;color:inherit;font-size:1rem"><input type="checkbox" style="width:22px;height:22px" data-task="${t.id}" ${t.done ? 'checked' : ''}><span class="grow ${t.done ? 'muted' : ''}" style="${t.done ? 'text-decoration:line-through' : ''}">${esc(t.title)}<div class="small muted">${t.assigneeId ? '👤 ' + esc(member(t.assigneeId)?.name || '') : 'Unassigned'}${t.dueAt ? ' · due ' + fmtDate(t.dueAt) : ''}</div></span></label>`).join('')}</div>` : '<div class="muted small" style="margin-top:6px">No tasks yet. Assign responsibilities to clan members.</div>'}</div>
     <div class="card"><div class="row"><h3 class="grow" style="margin:0">Polls</h3><button class="btn small ghost" data-addpoll>+ Poll</button></div>
-      ${d.polls.length ? d.polls.map(pollHTML).join('') : '<div class="muted small" style="margin-top:6px">Ask the family to vote on options (dates, places…).</div>'}</div>
+      ${d.polls.length ? d.polls.map(pollHTML).join('') : '<div class="muted small" style="margin-top:6px">Ask the clan to vote on options (dates, places…).</div>'}</div>
     <div class="card"><div class="row"><h3 class="grow" style="margin:0">Attachments</h3><button class="btn small ghost" data-attach>+ File</button></div>
       ${d.files.length ? `<div class="list">${d.files.map(f => `<a href="/api/files/${f.id}/content" download="${esc(f.name)}" style="color:inherit;text-decoration:none" class="row">📎 <span class="grow">${esc(f.name)}</span><span class="small muted">${fmtSize(f.size)}</span></a>`).join('')}</div>` : '<div class="muted small" style="margin-top:6px">Tickets, photos, documents — stored in your Google Drive.</div>'}</div>
     ${canEdit ? `<div class="card"><h3>Manage plan</h3><div class="row wrap">
@@ -113,7 +113,7 @@ KF.views.polls = async view => {
 /* ---------- EVENTS ---------- */
 KF.actions.newEvent = async (prefDate) => {
   if (!can('events')) return toast('You do not have permission to add events.');
-  const v = await formSheet('Add family event', [{ name: 'title', label: 'Event title', required: true }, { name: 'startsAt', label: 'Starts', type: 'datetime-local', value: prefDate || localISO(new Date(Date.now() + 86400000)), required: true }, { name: 'endsAt', label: 'Ends (optional)', type: 'datetime-local' }, { name: 'location', label: 'Location' }, { name: 'description', label: 'Details', type: 'textarea' }, { name: 'reminderMins', label: 'Remind', type: 'select', options: [{ value: 0, label: 'No reminder' }, { value: 60, label: '1 hour before' }, { value: 1440, label: '1 day before' }], value: 60 }], 'Add event');
+  const v = await formSheet('Add clan event', [{ name: 'title', label: 'Event title', required: true }, { name: 'startsAt', label: 'Starts', type: 'datetime-local', value: prefDate || localISO(new Date(Date.now() + 86400000)), required: true }, { name: 'endsAt', label: 'Ends (optional)', type: 'datetime-local' }, { name: 'location', label: 'Location' }, { name: 'description', label: 'Details', type: 'textarea' }, { name: 'reminderMins', label: 'Remind', type: 'select', options: [{ value: 0, label: 'No reminder' }, { value: 60, label: '1 hour before' }, { value: 1440, label: '1 day before' }], value: 60 }], 'Add event');
   if (!v) return;
   try { await api('/events', { method: 'POST', body: { ...v, startsAt: new Date(v.startsAt).toISOString(), endsAt: v.endsAt ? new Date(v.endsAt).toISOString() : null } }); toast('Event added'); route(); } catch (e) { toast(e.message); }
 };
@@ -188,8 +188,8 @@ KF.views.shopping = async view => {
 
 /* ---------- EXPENSES ---------- */
 KF.actions.newExpense = async () => {
-  if (!can('expenses')) return toast('Expenses are private. Ask the family owner for access.');
-  const v = await formSheet('Add family expense', [{ name: 'title', label: 'What was it for?', required: true }, { name: 'amount', label: 'Amount', type: 'number', step: '0.01', required: true }, { name: 'date', label: 'Date', type: 'date', value: localISO().slice(0, 10), required: true }, { name: 'category', label: 'Category', type: 'select', options: EXP_CATS }, { name: 'paidBy', label: 'Paid by', type: 'select', options: memberOptions(), value: KF.state.me.id }], 'Next: split');
+  if (!can('expenses')) return toast('Expenses are private. Ask the clan leader for access.');
+  const v = await formSheet('Add clan expense', [{ name: 'title', label: 'What was it for?', required: true }, { name: 'amount', label: 'Amount', type: 'number', step: '0.01', required: true }, { name: 'date', label: 'Date', type: 'date', value: localISO().slice(0, 10), required: true }, { name: 'category', label: 'Category', type: 'select', options: EXP_CATS }, { name: 'paidBy', label: 'Paid by', type: 'select', options: memberOptions(), value: KF.state.me.id }], 'Next: split');
   if (!v) return;
   const split = await new Promise(res => sheet(`<h2>Split between</h2><div class="gap">${KF.state.members.map(m => `<label class="row" style="margin:0;color:inherit;font-size:1rem"><input type="checkbox" style="width:22px;height:22px" value="${m.id}" checked>${esc(m.name)}</label>`).join('')}</div><div class="row" style="margin-top:12px"><button class="btn ghost grow" data-n>Cancel</button><button class="btn gold grow" data-y>Save expense</button></div>`, (s, close) => {
     $('[data-n]', s).onclick = () => { close(); res(null); };
@@ -199,7 +199,7 @@ KF.actions.newExpense = async () => {
   try { await api('/expenses', { method: 'POST', body: { ...v, amount: +v.amount, split } }); toast('Expense saved'); route(); } catch (e) { toast(e.message); }
 };
 KF.views.expenses = async view => {
-  if (!can('expenses')) { view.innerHTML = '<div class="empty"><div class="big">🔒</div>Family expenses are private. Ask the family owner to grant you access.</div>'; return; }
+  if (!can('expenses')) { view.innerHTML = '<div class="empty"><div class="big">🔒</div>Clan funds are private. Ask the clan leader to grant you access.</div>'; return; }
   let month = localISO().slice(0, 7);
   async function draw() {
     const d = await api('/expenses?month=' + month);

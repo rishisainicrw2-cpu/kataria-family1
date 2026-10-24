@@ -154,7 +154,7 @@ route('DELETE', '/api/me', async ctx => {
   if (!(await L.checkPassword(String(ctx.body.password || ''), u.pass_hash, u.pass_salt))) throw bad('Password is incorrect.');
   const fid = ctx.user.familyId;
   if (fid && ctx.user.role === 'owner' && q.get('SELECT 1 FROM memberships WHERE family_id=? AND user_id!=?', fid, u.id))
-    throw new HttpError(409, 'You are the family owner. Transfer ownership (Members → manage) or delete the family before deleting your account.');
+    throw new HttpError(409, 'You are the clan leader. Transfer ownership (Members → manage) or delete the clan before deleting your account.');
   if (fid && ctx.user.role === 'owner') await deleteFamily(fid);
   else if (fid) removeFromFamily(u.id, fid);
   tx(() => {
@@ -169,8 +169,8 @@ route('DELETE', '/api/me', async ctx => {
 /* =============== FAMILY =============== */
 function familyDto(f) { return { id: f.id, name: f.name, accent: f.accent, currency: f.currency, sections: f.sections ? json(f.sections, null) : null, hasLogo: !!f.logo_mime }; }
 route('POST', '/api/family', ctx => {
-  if (ctx.user.familyId) throw bad('You are already in a family.');
-  const name = L.str(ctx.body.name, { name: 'Family name', required: true, max: 60 });
+  if (ctx.user.familyId) throw bad('You are already in a clan.');
+  const name = L.str(ctx.body.name, { name: 'Clan name', required: true, max: 60 });
   const id = uid();
   tx(() => {
     q.run('INSERT INTO families(id,name,sections,owner_id,created_at) VALUES(?,?,?,?,?)', id, name, JSON.stringify(L.SECTION_TYPES), ctx.user.id, now());
@@ -180,7 +180,7 @@ route('POST', '/api/family', ctx => {
   return { ok: true };
 });
 route('POST', '/api/family/join', ctx => {
-  if (ctx.user.familyId) throw bad('You are already in a family.');
+  if (ctx.user.familyId) throw bad('You are already in a clan.');
   const code = L.str(ctx.body.code, { name: 'Invitation code', required: true, max: 20 }).toUpperCase().replace(/\s/g, '');
   const inv = q.get('SELECT * FROM invites WHERE code=?', code);
   if (!inv || inv.revoked || inv.uses >= inv.max_uses || inv.expires_at < now()) throw bad('That invitation code is invalid, used up or expired.');
@@ -190,7 +190,7 @@ route('POST', '/api/family/join', ctx => {
     for (const p of q.all("SELECT id FROM plans WHERE family_id=? AND status IN ('upcoming','in_progress')", inv.family_id)) q.run('INSERT OR IGNORE INTO plan_participants(plan_id,user_id) VALUES(?,?)', p.id, ctx.user.id);
   });
   ws.broadcastFamily(inv.family_id, { type: 'family.changed' });
-  L.notify(L.familyMemberIds(inv.family_id).filter(i => i !== ctx.user.id), { title: `${ctx.user.name} joined the family 🎉`, url: '#/members', kind: 'announce' });
+  L.notify(L.familyMemberIds(inv.family_id).filter(i => i !== ctx.user.id), { title: `${ctx.user.name} joined the clan 🎉`, url: '#/members', kind: 'announce' });
   return { ok: true };
 }, { limit: { bucket: 'join', max: 10 } });
 route('GET', '/api/family', ctx => {
@@ -200,7 +200,7 @@ route('GET', '/api/family', ctx => {
 });
 route('PATCH', '/api/family', ctx => {
   const fid = L.needAdmin(ctx.user) || ctx.user.familyId; const b = ctx.body; const f = q.get('SELECT * FROM families WHERE id=?', fid);
-  const name = b.name !== undefined ? L.str(b.name, { name: 'Family name', required: true, max: 60 }) : f.name;
+  const name = b.name !== undefined ? L.str(b.name, { name: 'Clan name', required: true, max: 60 }) : f.name;
   const currency = b.currency !== undefined ? L.str(b.currency, { name: 'Currency', max: 3 }) || '₹' : f.currency;
   let accent = f.accent; if (b.accent !== undefined) { if (!/^#[0-9a-fA-F]{6}$/.test(b.accent)) throw bad('Invalid colour'); accent = b.accent; }
   let sections = f.sections; if (Array.isArray(b.sections)) sections = JSON.stringify(['general', ...b.sections.filter(s => L.SECTION_TYPES.includes(s) && s !== 'general')]);
@@ -237,7 +237,7 @@ route('DELETE', '/api/family', async ctx => {
 });
 route('POST', '/api/family/leave', ctx => {
   const fid = L.needFamily(ctx.user);
-  if (ctx.user.role === 'owner') throw bad('The family owner cannot leave. Transfer ownership or delete the family.');
+  if (ctx.user.role === 'owner') throw bad('The clan leader cannot leave. Transfer leadership or delete the clan.');
   removeFromFamily(ctx.user.id, fid);
 });
 route('POST', '/api/family/transfer', async ctx => {
@@ -245,7 +245,7 @@ route('POST', '/api/family/transfer', async ctx => {
   const u = q.get('SELECT * FROM users WHERE id=?', ctx.user.id);
   if (!(await L.checkPassword(String(ctx.body.password || ''), u.pass_hash, u.pass_salt))) throw bad('Password is incorrect.');
   const target = q.get('SELECT * FROM memberships WHERE user_id=? AND family_id=?', ctx.body.userId, fid);
-  if (!target || target.user_id === ctx.user.id) throw bad('Choose another family member.');
+  if (!target || target.user_id === ctx.user.id) throw bad('Choose another clan member.');
   tx(() => { q.run("UPDATE memberships SET role='admin' WHERE user_id=?", ctx.user.id); q.run("UPDATE memberships SET role='owner' WHERE user_id=?", target.user_id); q.run('UPDATE families SET owner_id=? WHERE id=?', target.user_id, fid); });
   ws.broadcastFamily(fid, { type: 'family.changed' });
 });
@@ -318,7 +318,7 @@ route('GET', '/api/rooms', ctx => {
 route('GET', '/api/rooms/:id', ctx => roomDto(L.roomFor(ctx.user, ctx.params.id), ctx.user));
 route('POST', '/api/dms', ctx => {
   const fid = L.needFamily(ctx.user); const other = String(ctx.body.userId || '');
-  if (other === ctx.user.id || !L.sameFamily(ctx.user, other)) throw bad('Choose another member of your family.');
+  if (other === ctx.user.id || !L.sameFamily(ctx.user, other)) throw bad('Choose another member of your clan.');
   const existing = q.get("SELECT r.id FROM rooms r WHERE r.family_id=? AND r.type='dm' AND (SELECT COUNT(*) FROM room_members m WHERE m.room_id=r.id AND m.user_id IN (?,?))=2", fid, ctx.user.id, other);
   if (existing) return { id: existing.id };
   const id = uid();
@@ -499,7 +499,7 @@ route('GET', '/api/drive/backup', ctx => { L.needOwner(ctx.user); return backup.
 route('POST', '/api/drive/backup', async ctx => {
   L.needOwner(ctx.user);
   if (!backup.backupFamily()) throw new HttpError(409, 'Connect Google Drive first.');
-  if (backup.backupFamily() !== ctx.user.familyId) throw new HttpError(409, 'Backups are kept in the Drive of the first family that connected one.');
+  if (backup.backupFamily() !== ctx.user.familyId) throw new HttpError(409, 'Backups are kept in the Drive of the first clan that connected one.');
   const r = await backup.run();
   if (r.skipped) throw new HttpError(409, r.skipped === 'drive-not-connected' ? 'Connect Google Drive first.' : r.skipped === 'busy' ? 'A backup is already running.' : 'Backups are switched off on this server.');
   return r;
@@ -510,7 +510,7 @@ route('POST', '/api/drive/restore-key', async ctx => {
   const u = q.get('SELECT * FROM users WHERE id=?', ctx.user.id);
   if (!(await L.checkPassword(String(ctx.body.password || ''), u.pass_hash, u.pass_salt))) throw bad('Password is incorrect.');
   if (!backup.backupFamily()) throw new HttpError(409, 'Connect Google Drive first.');
-  if (backup.backupFamily() !== ctx.user.familyId) throw new HttpError(409, 'Backups are kept in the Drive of the first family that connected one.');
+  if (backup.backupFamily() !== ctx.user.familyId) throw new HttpError(409, 'Backups are kept in the Drive of the first clan that connected one.');
   const key = backup.restoreKey(ctx.user.familyId); if (!key) throw new HttpError(409, 'Connect Google Drive first.');
   return { key };
 });
@@ -557,5 +557,5 @@ route('GET', '/api/dashboard', ctx => {
 });
 route('GET', '/api/notifications/unread-count', ctx => ({ count: q.get('SELECT COUNT(*) c FROM notifications WHERE user_id=? AND read=0', ctx.user.id).c }));
 route('GET', '/api/notifications', ctx => q.all('SELECT * FROM notifications WHERE user_id=? ORDER BY id DESC LIMIT 60', ctx.user.id).map(n => ({ id: n.id, title: n.title, body: n.body, url: n.url, read: !!n.read, createdAt: n.created_at })));
-route('GET', '/api/notifications/latest', ctx => { const n = q.get('SELECT title,body,url FROM notifications WHERE user_id=? AND read=0 ORDER BY id DESC LIMIT 1', ctx.user.id); return n || { title: 'KATARIA FAMILY', body: 'New activity in your family', url: '/' }; });
+route('GET', '/api/notifications/latest', ctx => { const n = q.get('SELECT title,body,url FROM notifications WHERE user_id=? AND read=0 ORDER BY id DESC LIMIT 1', ctx.user.id); return n || { title: 'HINDU ESPORTS', body: 'New activity in your clan', url: '/' }; });
 route('POST', '/api/notifications/read', ctx => { q.run('UPDATE notifications SET read=1 WHERE user_id=?', ctx.user.id); });

@@ -6,7 +6,7 @@ const ws = require('./ws');
 const drive = require('./drive');
 
 const PLAN_STATUS = ['upcoming', 'in_progress', 'completed', 'cancelled'];
-const CATS = ['Family trip', 'Birthday party', 'Wedding', 'Family dinner', 'Festival', 'Weekend outing', 'Shopping trip', 'Other'];
+const CATS = ['Scrim', 'Tournament', 'Ranked grind', 'Practice', 'Clan meeting', 'Team bonding', 'Streaming', 'Other'];
 const REMINDERS = [0, 60, 1440, 10080];
 const mins = v => { const n = Math.round(+v || 0); return REMINDERS.includes(n) ? n : 0; };
 const canManagePlan = (u, p) => p.created_by === u.id || L.isAdmin(u) || !!u.perms.plans_manage;
@@ -95,7 +95,7 @@ route('POST', '/api/plans/:id/remind', ctx => {
 route('POST', '/api/plans/:id/tasks', ctx => {
   const p = L.owned('plans', ctx.params.id, ctx.user);
   const title = L.str(ctx.body.title, { name: 'Task', required: true, max: 200 });
-  let assignee = ctx.body.assigneeId || null; if (assignee && !L.sameFamily(ctx.user, assignee)) throw bad('Assignee must be a family member.');
+  let assignee = ctx.body.assigneeId || null; if (assignee && !L.sameFamily(ctx.user, assignee)) throw bad('Assignee must be a clan member.');
   const id = uid();
   q.run('INSERT INTO tasks(id,plan_id,family_id,title,assignee_id,due_at,created_by,created_at) VALUES(?,?,?,?,?,?,?,?)', id, p.id, p.family_id, title, assignee, L.ts(ctx.body.dueAt), ctx.user.id, now());
   if (assignee && assignee !== ctx.user.id) L.notify([assignee], { title: `Task for you: ${title}`, body: `In plan "${p.title}"`, url: '#/plan/' + p.id, kind: 'task' });
@@ -194,7 +194,7 @@ route('DELETE', '/api/shopping/:id', ctx => { const l = L.owned('shopping_lists'
 route('POST', '/api/shopping/:id/items', ctx => {
   const l = L.owned('shopping_lists', ctx.params.id, ctx.user); const b = ctx.body;
   let link = L.str(b.link, { max: 500 }); if (link && !/^https?:\/\//i.test(link)) throw bad('Product link must start with http:// or https://');
-  let assignee = b.assigneeId || null; if (assignee && !L.sameFamily(ctx.user, assignee)) throw bad('Assignee must be a family member.');
+  let assignee = b.assigneeId || null; if (assignee && !L.sameFamily(ctx.user, assignee)) throw bad('Assignee must be a clan member.');
   const id = uid();
   q.run('INSERT INTO shopping_items(id,list_id,name,qty,price,assignee_id,link,created_at) VALUES(?,?,?,?,?,?,?,?)', id, l.id, L.str(b.name, { name: 'Product', required: true, max: 120 }), L.num(b.qty, { name: 'Quantity', min: 0.01, max: 100000 }) || 1, L.num(b.price, { name: 'Price', min: 0, max: 1e9 }), assignee, link || null, now());
   if (assignee && assignee !== ctx.user.id) L.notify([assignee], { title: `Please buy: ${b.name}`, body: `On list "${l.name}"`, url: '#/shopping', kind: 'task' });
@@ -208,7 +208,7 @@ route('DELETE', '/api/shopping/items/:id', ctx => { const it = itemFor(ctx); q.r
 
 /* =============== EXPENSES (private: needs the 'expenses' permission) =============== */
 route('GET', '/api/expenses', ctx => {
-  L.needPerm(ctx.user, 'expenses', 'Family expenses are private. Ask the family owner for access.');
+  L.needPerm(ctx.user, 'expenses', 'Clan funds are private. Ask the clan leader for access.');
   const fid = ctx.user.familyId; const month = /^\d{4}-\d{2}$/.test(ctx.query.month || '') ? ctx.query.month : new Date().toISOString().slice(0, 7);
   const rows = q.all("SELECT * FROM expenses WHERE family_id=? AND date LIKE ? ORDER BY date DESC, created_at DESC", fid, month + '%');
   const items = rows.map(e => ({ id: e.id, title: e.title, amount: e.amount, date: e.date, category: e.category || 'Other', paidBy: e.paid_by, split: q.all('SELECT user_id FROM expense_splits WHERE expense_id=?', e.id).map(s => s.user_id), canDelete: e.created_by === ctx.user.id || L.isAdmin(ctx.user) }));
@@ -221,7 +221,7 @@ route('GET', '/api/expenses', ctx => {
   return { items, total: Math.round(items.reduce((a, e) => a + e.amount, 0) * 100) / 100, settlements };
 });
 route('POST', '/api/expenses', ctx => {
-  L.needPerm(ctx.user, 'expenses', 'Family expenses are private. Ask the family owner for access.');
+  L.needPerm(ctx.user, 'expenses', 'Clan funds are private. Ask the clan leader for access.');
   const b = ctx.body, fid = ctx.user.familyId;
   const title = L.str(b.title, { name: 'Title', required: true, max: 120 });
   const amount = L.num(b.amount, { name: 'Amount', min: 0.01, max: 1e9, required: true });

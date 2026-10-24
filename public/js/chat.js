@@ -26,10 +26,10 @@ KF.views.chats = async view => {
       ${r.unread && !r.muted ? `<span class="badge">${r.unread}</span>` : ''}</a>`;
   const others = KF.state.members.filter(m => m.id !== KF.state.me.id);
   view.innerHTML = `<div class="gap fade">
-    <div class="card"><h3>Family rooms</h3><div class="list">${groups.map(row).join('')}</div></div>
+    <div class="card"><h3>Clan rooms</h3><div class="list">${groups.map(row).join('')}</div></div>
     <div class="card"><div class="row"><h3 class="grow" style="margin:0">Private chats</h3></div>
       ${dms.length ? `<div class="list">${dms.map(row).join('')}</div>` : '<div class="muted small" style="margin-top:8px">Only you and the other person can see a private chat.</div>'}
-      ${others.length ? `<div class="chips" style="margin-top:12px">${others.map(m => `<button class="chip" data-dm="${m.id}">＋ ${esc(m.name.split(' ')[0])}</button>`).join('')}</div>` : '<div class="empty small">Invite family members to start private chats.</div>'}</div>
+      ${others.length ? `<div class="chips" style="margin-top:12px">${others.map(m => `<button class="chip" data-dm="${m.id}">＋ ${esc(m.name.split(' ')[0])}</button>`).join('')}</div>` : '<div class="empty small">Invite clan members to start private chats.</div>'}</div>
     <a class="btn ghost block" href="#/search" style="text-align:center;text-decoration:none">${icon('search', 'width="18" height="18" style="vertical-align:-4px"')} Search all messages</a>
   </div>`;
   $$('[data-dm]', view).forEach(b => b.onclick = async () => {
@@ -51,7 +51,7 @@ KF.views.room = async (view, params) => {
 
   view.innerHTML = `
     <div class="chat-head">
-      <div class="grow small muted">${room.type === 'dm' ? '🔒 Private — only you two can see this' : room.type === 'planning' ? 'Discuss family plans here · <a href="#/plans">open Plans</a>' : room.type === 'shopping' ? 'Shared list · <a href="#/shopping">open Shopping lists</a>' : room.type === 'events' ? 'Event discussion · <a href="#/events">open Events</a>' : `${KF.state.members.length} member${KF.state.members.length === 1 ? '' : 's'}`}</div>
+      <div class="grow small muted">${room.type === 'dm' ? '🔒 Private — only you two can see this' : room.type === 'planning' ? 'Discuss match plans here · <a href="#/plans">open Plans</a>' : room.type === 'shopping' ? 'Shared list · <a href="#/shopping">open Shopping lists</a>' : room.type === 'events' ? 'Event discussion · <a href="#/events">open Events</a>' : `${KF.state.members.length} member${KF.state.members.length === 1 ? '' : 's'}`}</div>
       <button class="icon-btn" data-s title="Search in chat">${icon('search')}</button>
       <button class="icon-btn" data-pins title="Pinned messages">${icon('pin')}</button>
       <button class="icon-btn" data-mute title="Mute">${room.muted ? '🔕' : '🔔'}</button></div>

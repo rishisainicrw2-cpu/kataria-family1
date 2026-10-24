@@ -31,10 +31,10 @@ function authenticate(req) {
 /* ---------- permissions ---------- */
 const isAdmin = u => u.role === 'owner' || u.role === 'admin';
 const can = (u, perm) => isAdmin(u) || !!u.perms[perm];
-function needFamily(u) { if (!u.familyId) throw new HttpError(409, 'Join or create a family first.', 'no_family'); return u.familyId; }
-function needPerm(u, perm, msg) { needFamily(u); if (!can(u, perm)) throw forbidden(msg || 'You do not have permission to do that. Ask the family owner.'); }
-function needAdmin(u) { const fid = needFamily(u); if (!isAdmin(u)) throw forbidden('Only the family owner or an administrator can do that.'); return fid; }
-function needOwner(u) { const fid = needFamily(u); if (u.role !== 'owner') throw forbidden('Only the family owner can do that.'); return fid; }
+function needFamily(u) { if (!u.familyId) throw new HttpError(409, 'Join or create a clan first.', 'no_family'); return u.familyId; }
+function needPerm(u, perm, msg) { needFamily(u); if (!can(u, perm)) throw forbidden(msg || 'You do not have permission to do that. Ask the clan leader.'); }
+function needAdmin(u) { const fid = needFamily(u); if (!isAdmin(u)) throw forbidden('Only the clan leader or an administrator can do that.'); return fid; }
+function needOwner(u) { const fid = needFamily(u); if (u.role !== 'owner') throw forbidden('Only the clan leader can do that.'); return fid; }
 // Row belongs to the caller's family, else 404 (never reveal other families' ids)
 function owned(table, id, u) { const r = q.get(`SELECT * FROM ${table} WHERE id=? AND family_id=?`, id, needFamily(u)); if (!r) throw notFound(); return r; }
 
@@ -66,7 +66,10 @@ function members(fid) {
   return q.all('SELECT u.id,u.name,u.photo_v,m.role,m.perms,m.joined_at FROM memberships m JOIN users u ON u.id=m.user_id WHERE m.family_id=? ORDER BY m.joined_at', fid).map(memberDto);
 }
 const SECTION_TYPES = ['general', 'daily', 'events', 'planning', 'shopping'];
-const SECTION_NAMES = { general: 'General Family Chat', daily: 'Daily Discussion', events: 'Family Events', planning: 'Family Planning', shopping: 'Shopping Chat' };
+const SECTION_NAMES = { general: 'General Clan Chat', daily: 'Daily Discussion', events: 'Clan Events', planning: 'Match Planning', shopping: 'Gear Chat' };
+// One-time tidy-up: existing default rooms that still carry the old family names get the new clan names (renamed rooms are left alone).
+const OLD_ROOM_NAMES = { general: 'General Family Chat', events: 'Family Events', planning: 'Family Planning', shopping: 'Shopping Chat' };
+for (const [t, old] of Object.entries(OLD_ROOM_NAMES)) if (SECTION_NAMES[t] !== old) q.run('UPDATE rooms SET name=? WHERE type=? AND name=?', SECTION_NAMES[t], t, old);
 function ensureFamilyRooms(fid) {
   for (const t of SECTION_TYPES) if (!q.get('SELECT 1 FROM rooms WHERE family_id=? AND type=?', fid, t)) q.run('INSERT INTO rooms(id,family_id,type,name,created_at) VALUES(?,?,?,?,?)', uid(), fid, t, SECTION_NAMES[t], now());
 }

@@ -1,4 +1,4 @@
-/* KATARIA FAMILY — core helpers: state, API client, WebSocket, UI utilities */
+/* HINDU ESPORTS — core helpers: state, API client, WebSocket, UI utilities */
 const KF = window.KF = { state: { me: null, family: null, members: [], rooms: [], unread: {}, online: new Set() }, views: {}, ws: null, handlers: {} };
 
 const $ = (s, el = document) => el.querySelector(s);
@@ -126,12 +126,12 @@ function localISO(d = new Date()) { const p = n => String(n).padStart(2, '0'); r
 
 /* theme */
 function applyTheme() {
-  const pref = (KF.state.me && KF.state.me.prefs && KF.state.me.prefs.theme) || localStorage.getItem('kf_theme') || 'auto';
+  const pref = (KF.state.me && KF.state.me.prefs && KF.state.me.prefs.theme) || localStorage.getItem('kf_theme') || 'dark';
   const dark = pref === 'dark' || (pref === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
   document.documentElement.dataset.theme = dark ? 'dark' : 'light';
   const accent = KF.state.family && KF.state.family.accent;
   if (accent) document.documentElement.style.setProperty('--accent', accent); else document.documentElement.style.removeProperty('--accent');
-  document.querySelector('meta[name=theme-color]').content = dark ? '#05060d' : '#10236b';
+  document.querySelector('meta[name=theme-color]').content = dark ? '#000000' : '#a63a05';
 }
 KF.applyTheme = applyTheme;
 

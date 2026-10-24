@@ -1,5 +1,5 @@
-/* Members, invitations, notifications, profile, settings, family settings, Drive, files, search, privacy, help */
-const ROLE_LABEL = { owner: 'Family Owner', admin: 'Administrator', member: 'Family Member' };
+/* Members, invitations, notifications, profile, settings, clan settings, Drive, files, search, privacy, help */
+const ROLE_LABEL = { owner: 'Clan Leader', admin: 'Administrator', member: 'Clan Member' };
 const SECTIONS = [['general', 'General chat'], ['daily', 'Daily discussion'], ['events', 'Events chat'], ['planning', 'Planning chat'], ['shopping', 'Shopping chat']];
 const link = (href, ic, label, sub = '') => `<a href="${href}" class="row" style="text-decoration:none;color:inherit;padding:12px 0"><span class="avatar sm" style="border-radius:12px">${icon(ic, 'width="18" height="18"')}</span><span class="grow"><b>${label}</b>${sub ? `<div class="small muted">${sub}</div>` : ''}</span><span class="muted">›</span></a>`;
 
@@ -10,12 +10,12 @@ KF.views.profile = async view => {
     <div class="card center">${avatar(me, '')}<h2 style="margin-top:8px">${esc(me.name)}</h2><div class="small muted">${esc(me.email)}</div><div style="margin-top:6px"><span class="pill gold">${ROLE_LABEL[me.role]}</span> <span class="pill">${esc(f.name)}</span></div>
       <div class="row" style="justify-content:center;margin-top:12px"><button class="btn small ghost" data-name>Edit name</button><button class="btn small ghost" data-photo>Change photo</button></div></div>
     <div class="card list">
-      ${link('#/shopping', 'cart', 'Shopping lists')}${link('#/expenses', 'money', 'Family expenses', 'Private')}${link('#/memories', 'photo', 'Memories & albums')}${link('#/polls', 'poll', 'Polls & voting')}${link('#/events', 'cal', 'Family events')}${link('#/files', 'folder', 'File manager', 'Files stored in Google Drive')}</div>
+      ${link('#/shopping', 'cart', 'Shopping lists')}${link('#/expenses', 'money', 'Clan funds', 'Private')}${link('#/memories', 'photo', 'Memories & albums')}${link('#/polls', 'poll', 'Polls & voting')}${link('#/events', 'cal', 'Clan events')}${link('#/files', 'folder', 'File manager', 'Files stored in Google Drive')}</div>
     <div class="card list">
-      ${link('#/members', 'users', 'Family members', `${KF.state.members.length} in ${esc(f.name)}`)}${admin ? link('#/invitations', 'invite', 'Invitations') : ''}${admin ? link('#/family', 'home', 'Family settings') : ''}${me.role === 'owner' ? link('#/drive', 'drive', 'Google Drive connection') : ''}</div>
+      ${link('#/members', 'users', 'Clan members', `${KF.state.members.length} in ${esc(f.name)}`)}${admin ? link('#/invitations', 'invite', 'Invitations') : ''}${admin ? link('#/family', 'home', 'Clan settings') : ''}${me.role === 'owner' ? link('#/drive', 'drive', 'Google Drive connection') : ''}</div>
     <div class="card list">${link('#/settings', 'gear', 'App settings', 'Theme, notifications')}${link('#/privacy', 'lock', 'Privacy & security')}${link('#/help', 'help', 'Help & support')}</div>
     <button class="btn ghost block" data-out>Log out</button>
-    <div class="center small muted">KATARIA FAMILY · Together as One ✦</div></div>`;
+    <div class="center small muted">HINDU ESPORTS · Together as One ✦</div></div>`;
   $('[data-name]', view).onclick = async () => { const v = await formSheet('Your name', [{ name: 'name', label: 'Display name', value: me.name, required: true }]); if (v) try { const u = await api('/me', { method: 'PATCH', body: v }); Object.assign(KF.state.me, u); await KF.refreshFamily(); route(); } catch (e) { toast(e.message); } };
   $('[data-photo]', view).onclick = async () => { const [file] = await pickFile('image/*'); if (!file) return; const fd = new FormData(); fd.append('file', file); try { const u = await api('/me/photo', { method: 'POST', body: fd }); Object.assign(KF.state.me, u); await KF.refreshFamily(); route(); } catch (e) { toast(e.message); } };
   $('[data-out]', view).onclick = () => KF.logout();
@@ -29,20 +29,20 @@ KF.views.members = async view => {
       ${m.id !== me.id ? `<button class="btn small ghost" data-dm="${m.id}">Chat</button>` : ''}
       ${(owner || (me.role === 'admin' && m.role === 'member')) && m.id !== me.id ? `<button class="icon-btn" data-man="${m.id}">${icon('more')}</button>` : ''}</div>`).join('')}</div></div>
     ${me.role !== 'member' ? '<a class="btn gold block" href="#/invitations" style="text-align:center;text-decoration:none">Invite someone</a>' : ''}
-    ${owner ? '' : '<button class="btn ghost block danger" data-leave style="color:var(--danger)">Leave this family</button>'}</div>`;
+    ${owner ? '' : '<button class="btn ghost block danger" data-leave style="color:var(--danger)">Leave this clan</button>'}</div>`;
   $$('[data-dm]', view).forEach(b => b.onclick = async () => { try { const r = await api('/dms', { method: 'POST', body: { userId: b.dataset.dm } }); location.hash = '#/room/' + r.id; } catch (e) { toast(e.message); } });
   $$('[data-man]', view).forEach(b => b.onclick = () => {
     const m = ms.find(x => x.id === b.dataset.man); const p = m.perms || {};
     sheet(`<h2>${esc(m.name)}</h2><div class="gap">
-      ${owner ? `<label>Role</label><select data-role><option value="member" ${m.role === 'member' ? 'selected' : ''}>Family Member</option><option value="admin" ${m.role === 'admin' ? 'selected' : ''}>Administrator</option></select>` : ''}
+      ${owner ? `<label>Role</label><select data-role><option value="member" ${m.role === 'member' ? 'selected' : ''}>Clan Member</option><option value="admin" ${m.role === 'admin' ? 'selected' : ''}>Administrator</option></select>` : ''}
       <label>Permissions</label>
       ${[['plans', 'Create plans'], ['events', 'Add events'], ['expenses', 'View & add expenses'], ['plans_manage', 'Manage any plan'], ['invite', 'Create invitations']].map(([k, l]) => `<label class="row" style="margin:0;color:inherit;font-size:1rem"><input type="checkbox" style="width:22px;height:22px" data-p="${k}" ${p[k] ? 'checked' : ''}>${l}</label>`).join('')}
-      <button class="btn gold" data-save>Save</button><button class="btn danger" data-rm>Remove from family</button></div>`, (s, close) => {
+      <button class="btn gold" data-save>Save</button><button class="btn danger" data-rm>Remove from clan</button></div>`, (s, close) => {
       $('[data-save]', s).onclick = async () => { const perms = {}; $$('[data-p]', s).forEach(c => perms[c.dataset.p] = c.checked); try { await api('/members/' + m.id, { method: 'PATCH', body: { perms, role: owner ? $('[data-role]', s).value : undefined } }); close(); await KF.refreshFamily(); route(); } catch (e) { toast(e.message); } };
-      $('[data-rm]', s).onclick = async () => { close(); if (await confirmSheet(`Remove ${m.name} from the family?`, 'Remove', true)) try { await api('/members/' + m.id, { method: 'DELETE' }); await KF.refreshFamily(); route(); } catch (e) { toast(e.message); } };
+      $('[data-rm]', s).onclick = async () => { close(); if (await confirmSheet(`Remove ${m.name} from the clan?`, 'Remove', true)) try { await api('/members/' + m.id, { method: 'DELETE' }); await KF.refreshFamily(); route(); } catch (e) { toast(e.message); } };
     });
   });
-  const lv = $('[data-leave]', view); if (lv) lv.onclick = async () => { if (await confirmSheet('Leave this family? You will lose access to its chats and files.', 'Leave', true)) try { await api('/family/leave', { method: 'POST' }); KF.boot(); location.hash = ''; } catch (e) { toast(e.message); } };
+  const lv = $('[data-leave]', view); if (lv) lv.onclick = async () => { if (await confirmSheet('Leave this clan? You will lose access to its chats and files.', 'Leave', true)) try { await api('/family/leave', { method: 'POST' }); KF.boot(); location.hash = ''; } catch (e) { toast(e.message); } };
 };
 
 /* ---------- INVITATIONS ---------- */
@@ -54,10 +54,10 @@ KF.views.invitations = async view => {
       <div class="row wrap" style="margin-top:8px"><button class="btn small" data-share="${i.code}">Share link</button><button class="btn small ghost" data-copy="${i.code}">Copy code</button><button class="btn small danger" data-rev="${i.id}">Revoke</button></div></div>`).join('') : '<div class="empty"><div class="big">✉️</div>No active invitations.</div>'}
     <p class="small muted">Invitation links only work for people who then register or log in. You can revoke a code at any time.</p></div>`;
   $('[data-new]', view).onclick = async () => {
-    const v = await formSheet('New invitation', [{ name: 'role', label: 'Joins as', type: 'select', options: [{ value: 'member', label: 'Family Member' }, ...(KF.state.me.role === 'owner' ? [{ value: 'admin', label: 'Administrator' }] : [])] }, { name: 'maxUses', label: 'Maximum uses', type: 'number', value: 1 }, { name: 'days', label: 'Valid for (days)', type: 'number', value: 7 }], 'Create');
+    const v = await formSheet('New invitation', [{ name: 'role', label: 'Joins as', type: 'select', options: [{ value: 'member', label: 'Clan Member' }, ...(KF.state.me.role === 'owner' ? [{ value: 'admin', label: 'Administrator' }] : [])] }, { name: 'maxUses', label: 'Maximum uses', type: 'number', value: 1 }, { name: 'days', label: 'Valid for (days)', type: 'number', value: 7 }], 'Create');
     if (v) try { await api('/invites', { method: 'POST', body: { role: v.role, maxUses: +v.maxUses, days: +v.days } }); route(); } catch (e) { toast(e.message); }
   };
-  $$('[data-share]', view).forEach(b => b.onclick = async () => { const t = `Join our family on KATARIA FAMILY ✦ Together as One\n${url(b.dataset.share)}\nInvitation code: ${b.dataset.share}`; if (navigator.share) { try { await navigator.share({ title: 'KATARIA FAMILY invitation', text: t }); } catch (_) {} } else { navigator.clipboard?.writeText(t); toast('Invitation copied'); } });
+  $$('[data-share]', view).forEach(b => b.onclick = async () => { const t = `Join our clan on HINDU ESPORTS ✦ Together as One\n${url(b.dataset.share)}\nInvitation code: ${b.dataset.share}`; if (navigator.share) { try { await navigator.share({ title: 'HINDU ESPORTS invitation', text: t }); } catch (_) {} } else { navigator.clipboard?.writeText(t); toast('Invitation copied'); } });
   $$('[data-copy]', view).forEach(b => b.onclick = () => { navigator.clipboard?.writeText(b.dataset.copy); toast('Code copied'); });
   $$('[data-rev]', view).forEach(b => b.onclick = async () => { try { await api('/invites/' + b.dataset.rev, { method: 'DELETE' }); route(); } catch (e) { toast(e.message); } });
 };
@@ -80,7 +80,7 @@ KF.views.settings = async view => {
       <p class="small muted">Mute single chats from inside each chat (🔔 button).</p>
       <button class="btn small ghost" data-push>${notifState === 'granted' ? 'Phone notifications enabled ✓' : notifState === 'denied' ? 'Blocked in browser settings' : 'Enable phone notifications'}</button>
       <p class="small muted">Push notifications need the server to have push keys configured (see the README). Without it you still get in-app alerts and unread badges.</p></div>
-    <div class="card"><h3>Install on your phone</h3><p class="small">Open this site in Chrome, tap the ⋮ menu, then <b>Install app</b> / <b>Add to Home screen</b>.</p><button class="btn small gold" data-install>Install KATARIA FAMILY</button></div>
+    <div class="card"><h3>Install on your phone</h3><p class="small">Open this site in Chrome, tap the ⋮ menu, then <b>Install app</b> / <b>Add to Home screen</b>.</p><button class="btn small gold" data-install>Install HINDU ESPORTS</button></div>
     <div class="card"><h3>Chat background</h3><div class="chips">${[['', 'Default'], ['#e8eefc', 'Sky'], ['#f7f0dc', 'Sand'], ['#0b1233', 'Midnight'], ['#101010', 'Black']].map(([c, l]) => `<button class="chip ${(pr.chatBg || '') === c ? 'on' : ''}" data-bg="${c}">${l}</button>`).join('')}</div></div></div>`;
   const savePref = async patch => { try { const u = await api('/me/prefs', { method: 'PATCH', body: patch }); KF.state.me.prefs = u.prefs; applyTheme(); applyChatBg(); } catch (e) { toast(e.message); } };
   $$('[data-theme]', view).forEach(b => b.onclick = async () => { localStorage.setItem('kf_theme', b.dataset.theme); await savePref({ theme: b.dataset.theme }); route(); });
@@ -95,33 +95,33 @@ KF.applyChatBg = applyChatBg;
 /* ---------- FAMILY SETTINGS (owner/admin) ---------- */
 KF.views.family = async view => {
   const f = KF.state.family, owner = KF.state.me.role === 'owner';
-  if (KF.state.me.role === 'member') { view.innerHTML = '<div class="empty"><div class="big">🔒</div>Only the family owner or administrators can change family settings.</div>'; return; }
+  if (KF.state.me.role === 'member') { view.innerHTML = '<div class="empty"><div class="big">🔒</div>Only the clan leader or administrators can change clan settings.</div>'; return; }
   const secs = f.sections || SECTIONS.map(s => s[0]);
   view.innerHTML = `<div class="gap fade">
-    <div class="card"><h3>Family</h3><label>Family name</label><input data-name value="${esc(f.name)}" maxlength="60"><label>Currency symbol</label><input data-cur value="${esc(f.currency || '₹')}" maxlength="3">
-      <label>Accent colour</label><div class="row">${['#1f46d6', '#0b7a75', '#7a2fd6', '#c2410c', '#be123c'].map(c => `<button class="chip ${f.accent === c || (!f.accent && c === '#1f46d6') ? 'on' : ''}" data-ac="${c}" style="background:${c};width:38px;height:38px;border-radius:50%;padding:0"></button>`).join('')}</div>
-      <label>Family logo</label><div class="row"><button class="btn small ghost" data-logo>Upload logo</button><span class="small muted">The installed phone icon stays KATARIA FAMILY — it can only change by reinstalling a rebuilt app.</span></div>
+    <div class="card"><h3>Clan</h3><label>Clan name</label><input data-name value="${esc(f.name)}" maxlength="60"><label>Currency symbol</label><input data-cur value="${esc(f.currency || '₹')}" maxlength="3">
+      <label>Accent colour</label><div class="row">${['#f26a0f', '#0b7a75', '#7a2fd6', '#c2410c', '#be123c'].map(c => `<button class="chip ${f.accent === c || (!f.accent && c === '#f26a0f') ? 'on' : ''}" data-ac="${c}" style="background:${c};width:38px;height:38px;border-radius:50%;padding:0"></button>`).join('')}</div>
+      <label>Clan logo</label><div class="row"><button class="btn small ghost" data-logo>Upload logo</button><span class="small muted">The installed phone icon stays HINDU ESPORTS — it can only change by reinstalling a rebuilt app.</span></div>
       <button class="btn gold block" data-save style="margin-top:12px">Save</button></div>
     <div class="card"><h3>Chat sections</h3>${SECTIONS.map(([k, l]) => `<label class="row" style="margin:0;padding:6px 0;color:inherit;font-size:1rem"><input type="checkbox" style="width:22px;height:22px" data-sec="${k}" ${secs.includes(k) ? 'checked' : ''} ${k === 'general' ? 'disabled' : ''}>${l}</label>`).join('')}</div>
     <div class="card"><h3>Post an announcement</h3><label>Title</label><input data-at><label>Message</label><textarea data-ab rows="2"></textarea><button class="btn small block" data-ann style="margin-top:8px">Post to dashboard &amp; notify everyone</button></div>
-    ${owner ? `<div class="card"><h3>Danger zone</h3><button class="btn danger block" data-delfam>Delete this family and all its data</button></div>` : ''}</div>`;
+    ${owner ? `<div class="card"><h3>Danger zone</h3><button class="btn danger block" data-delfam>Delete this clan and all its data</button></div>` : ''}</div>`;
   let accent = f.accent;
   $$('[data-ac]', view).forEach(b => b.onclick = () => { accent = b.dataset.ac; $$('[data-ac]', view).forEach(x => x.classList.toggle('on', x === b)); });
   $('[data-save]', view).onclick = async () => { try { await api('/family', { method: 'PATCH', body: { name: $('[data-name]', view).value, currency: $('[data-cur]', view).value, accent, sections: ['general', ...$$('[data-sec]', view).filter(c => c.checked && c.dataset.sec !== 'general').map(c => c.dataset.sec)] } }); await KF.refreshFamily(); await KF.loadRooms(); toast('Saved'); route(); } catch (e) { toast(e.message); } };
   $('[data-logo]', view).onclick = async () => { const [file] = await pickFile('image/*'); if (!file) return; const fd = new FormData(); fd.append('file', file); try { await api('/family/logo', { method: 'POST', body: fd }); toast('Logo updated'); } catch (e) { toast(e.message); } };
   $('[data-ann]', view).onclick = async () => { const title = $('[data-at]', view).value.trim(); if (!title) return toast('Add a title'); try { await api('/announcements', { method: 'POST', body: { title, body: $('[data-ab]', view).value } }); toast('Posted'); $('[data-at]', view).value = ''; $('[data-ab]', view).value = ''; } catch (e) { toast(e.message); } };
-  const df = $('[data-delfam]', view); if (df) df.onclick = async () => { const v = await formSheet('Delete family', [{ name: 'password', label: 'Enter your password to confirm', type: 'password', required: true }], 'Delete forever'); if (v) try { await api('/family', { method: 'DELETE', body: v }); location.hash = ''; KF.boot(); } catch (e) { toast(e.message); } };
+  const df = $('[data-delfam]', view); if (df) df.onclick = async () => { const v = await formSheet('Delete clan', [{ name: 'password', label: 'Enter your password to confirm', type: 'password', required: true }], 'Delete forever'); if (v) try { await api('/family', { method: 'DELETE', body: v }); location.hash = ''; KF.boot(); } catch (e) { toast(e.message); } };
 };
 
 /* ---------- GOOGLE DRIVE ---------- */
 KF.views.drive = async view => {
-  if (KF.state.me.role !== 'owner') { view.innerHTML = '<div class="empty"><div class="big">🔒</div>Only the family owner can manage the Google Drive connection.</div>'; return; }
+  if (KF.state.me.role !== 'owner') { view.innerHTML = '<div class="empty"><div class="big">🔒</div>Only the clan leader can manage the Google Drive connection.</div>'; return; }
   const s = await api('/drive/status');
   const bk = s.connected ? await api('/drive/backup').catch(() => null) : null;
   const q = new URLSearchParams(location.search);
   const backupCard = !bk ? '' : `<div class="card"><h3>Database backup</h3>
     <p class="small">Chats, plans and expenses are saved as an <b>encrypted</b> backup in your Drive folder. This protects your data on free hosts that erase their disk when they restart.</p>
-    ${!bk.enabled ? '<p class="small" style="color:var(--danger)">Backups are switched off on this server.</p>' : !bk.thisFamilyHoldsBackups ? '<p class="small muted">Backups are kept in the Drive of the first family connected to this server.</p>' : `
+    ${!bk.enabled ? '<p class="small" style="color:var(--danger)">Backups are switched off on this server.</p>' : !bk.thisFamilyHoldsBackups ? '<p class="small muted">Backups are kept in the Drive of the first clan connected to this server.</p>' : `
       <p class="small">${bk.lastAt ? `Last backup: <b>${esc(fmtDT(bk.lastAt))}</b>${bk.lastSize ? ' · ' + fmtSize(bk.lastSize) : ''}` : 'No backup made yet.'}</p>
       ${bk.lastError ? `<p class="small" style="color:var(--danger)">Last error: ${esc(bk.lastError)}</p>` : ''}
       ${!bk.persistentSecret ? '<p class="small" style="color:var(--danger)"><b>SECRET_KEY is not set on the server.</b> Without it, backups cannot be restored after a restart. Add it in your host settings.</p>' : ''}
@@ -148,7 +148,7 @@ KF.views.drive = async view => {
     ${!s.configured ? `<div class="card"><h3>One-time setup needed</h3><p class="small">The server owner must add Google OAuth credentials (free). Step by step instructions are in <b>README.md → “Connect Google Drive”</b>. Until then, uploads are refused with a clear error — nothing is stored anywhere else.</p></div>` : ''}
     ${poolCard}
     ${backupCard}
-    <div class="card small muted"><b>How access works:</b> your family never gets direct access to your Drive. Files are uploaded and downloaded through this app's server using your connected account, and the app checks each person's family membership before every download. The Drive folder is never made public.</div></div>`;
+    <div class="card small muted"><b>How access works:</b> your clan never gets direct access to your Drive. Files are uploaded and downloaded through this app's server using your connected account, and the app checks each person's clan membership before every download. The Drive folder is never made public.</div></div>`;
   if (q.get('drive')) { toast(q.get('drive') === 'connected' ? 'Google Drive connected' : 'Drive: ' + q.get('drive')); history.replaceState(null, '', '/#/drive'); }
   const v = $('[data-verify]', view); if (v) v.onclick = async () => { try { await api('/drive/setup', { method: 'POST' }); route(); } catch (e) { toast(e.message); } };
   const bb = $('[data-bk]', view); if (bb) bb.onclick = async () => { bb.disabled = true; toast('Backing up…'); try { await api('/drive/backup', { method: 'POST' }); toast('Backup saved to Drive'); route(); } catch (e) { toast(e.message); bb.disabled = false; } };
@@ -200,18 +200,18 @@ KF.views.search = async view => {
 KF.views.privacy = async view => {
   view.innerHTML = `<div class="gap fade">
     <div class="card"><h3>Change password</h3><label>Current password</label><input type="password" data-cp autocomplete="current-password"><label>New password (min 8)</label><input type="password" data-np autocomplete="new-password"><button class="btn gold block" data-pw style="margin-top:10px">Update password</button></div>
-    <div class="card"><h3>Your data</h3><p class="small">Download everything we hold about you in this family (messages, plans, expenses you are part of).</p><button class="btn small ghost" data-export>Download my data</button></div>
-    <div class="card"><h3>Delete my account</h3><p class="small">Removes your profile and your private chats. Messages you posted in family chats are replaced with “Message deleted”. Files you uploaded stay in the family's Drive unless you delete them first. The family owner must transfer or delete the family first.</p><button class="btn danger block" data-del>Delete my account</button></div>
-    <div class="card small muted"><b>About privacy:</b> data is protected by login, HTTPS and permission checks on the server. Messages are <b>not</b> end-to-end encrypted — the server administrator can technically read the database. Private chats are hidden from other family members but not from whoever hosts the server.</div></div>`;
+    <div class="card"><h3>Your data</h3><p class="small">Download everything we hold about you in this clan (messages, plans, expenses you are part of).</p><button class="btn small ghost" data-export>Download my data</button></div>
+    <div class="card"><h3>Delete my account</h3><p class="small">Removes your profile and your private chats. Messages you posted in clan chats are replaced with “Message deleted”. Files you uploaded stay in the clan's Drive unless you delete them first. The clan leader must transfer leadership or delete the clan first.</p><button class="btn danger block" data-del>Delete my account</button></div>
+    <div class="card small muted"><b>About privacy:</b> data is protected by login, HTTPS and permission checks on the server. Messages are <b>not</b> end-to-end encrypted — the server administrator can technically read the database. Private chats are hidden from other clan members but not from whoever hosts the server.</div></div>`;
   $('[data-pw]', view).onclick = async () => { try { await api('/me/password', { method: 'POST', body: { current: $('[data-cp]', view).value, next: $('[data-np]', view).value } }); toast('Password updated'); $('[data-cp]', view).value = $('[data-np]', view).value = ''; } catch (e) { toast(e.message); } };
-  $('[data-export]', view).onclick = async () => { try { const d = await api('/me/export'); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(d, null, 2)], { type: 'application/json' })); a.download = 'kataria-family-my-data.json'; a.click(); } catch (e) { toast(e.message); } };
+  $('[data-export]', view).onclick = async () => { try { const d = await api('/me/export'); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(d, null, 2)], { type: 'application/json' })); a.download = 'hindu-esports-my-data.json'; a.click(); } catch (e) { toast(e.message); } };
   $('[data-del]', view).onclick = async () => { const v = await formSheet('Delete account', [{ name: 'password', label: 'Enter your password to confirm', type: 'password', required: true }], 'Delete forever'); if (v) try { await api('/me', { method: 'DELETE', body: v }); KF.state.me = null; KF.showAuth('welcome'); } catch (e) { toast(e.message); } };
 };
 
 /* ---------- HELP ---------- */
 KF.views.help = async view => {
-  const faq = [['How do I install the app?', 'Open the site in Chrome on Android → ⋮ menu → Install app (or Add to Home screen).'], ['How do I invite family?', 'Profile → Invitations → Create invitation → Share link. They register, and are added automatically.'], ['Who can see my private chats?', 'Only you and the other person. They are not shown to the family or admins in the app.'], ['Where are photos and files stored?', 'In the family owner\'s Google Drive folder, uploaded through this app. Nothing is made public.'], ['Why do notifications not pop up?', 'Enable them in App Settings. Phone push also needs server push keys (see README). Otherwise you see badges and in-app alerts.'], ['I forgot my password', 'On the login screen tap “Forgot password?”. The code appears in the server log for whoever hosts the app (no email service is used).']];
+  const faq = [['How do I install the app?', 'Open the site in Chrome on Android → ⋮ menu → Install app (or Add to Home screen).'], ['How do I invite clan mates?', 'Profile → Invitations → Create invitation → Share link. They register, and are added automatically.'], ['Who can see my private chats?', 'Only you and the other person. They are not shown to the clan or admins in the app.'], ['Where are photos and files stored?', 'In the clan leader\'s Google Drive folder, uploaded through this app. Nothing is made public.'], ['Why do notifications not pop up?', 'Enable them in App Settings. Phone push also needs server push keys (see README). Otherwise you see badges and in-app alerts.'], ['I forgot my password', 'On the login screen tap “Forgot password?”. The code appears in the server log for whoever hosts the app (no email service is used).']];
   view.innerHTML = `<div class="gap fade"><div class="card"><h3>Frequently asked</h3>${faq.map(([q, a]) => `<details style="padding:8px 0;border-bottom:1px solid var(--line)"><summary><b>${q}</b></summary><p class="small">${a}</p></details>`).join('')}</div>
-    <div class="card"><h3>Contact</h3><p class="small">Ask your Family Owner for help, or open an issue wherever this app's code is hosted.</p></div>
-    <div class="center small muted">KATARIA FAMILY v1.0 · Together as One ✦</div></div>`;
+    <div class="card"><h3>Contact</h3><p class="small">Ask your Clan Leader for help, or open an issue wherever this app's code is hosted.</p></div>
+    <div class="center small muted">HINDU ESPORTS v1.0 · Together as One ✦</div></div>`;
 };

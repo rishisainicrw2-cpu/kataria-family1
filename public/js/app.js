@@ -1,12 +1,12 @@
 /* Router, navigation shell and boot sequence */
-const TABS = [['home', 'Home', 'home'], ['chats', 'Chats', 'chat'], ['plans', 'Plans', 'plans'], ['calendar', 'Calendar', 'cal'], ['profile', 'Profile', 'user']];
+const TABS = [['home', 'Home', 'home'], ['chats', 'Chats', 'chat'], ['plans', 'Matches', 'plans'], ['calendar', 'Calendar', 'cal'], ['profile', 'Profile', 'user']];
 const TAB_OF = { room: 'chats', search: 'chats', plan: 'plans', events: 'calendar', members: 'profile', invitations: 'profile', notifications: 'home', settings: 'profile', family: 'profile', drive: 'profile', files: 'profile', privacy: 'profile', help: 'profile', polls: 'plans', shopping: 'home', expenses: 'home', memories: 'home' };
-const TITLES = { home: 'KATARIA FAMILY', chats: 'Chats', plans: 'Family Plans', calendar: 'Calendar', profile: 'Profile', events: 'Family Events', shopping: 'Shopping Lists', expenses: 'Family Expenses', memories: 'Memories', polls: 'Polls & Voting', members: 'Family Members', invitations: 'Invitations', notifications: 'Notifications', settings: 'App Settings', family: 'Family Settings', drive: 'Google Drive', files: 'File Manager', search: 'Search', privacy: 'Privacy & Security', help: 'Help & Support', plan: 'Plan' };
+const TITLES = { home: 'HINDU ESPORTS', chats: 'Chats', plans: 'Match Plans', calendar: 'Calendar', profile: 'Profile', events: 'Clan Events', shopping: 'Gear Lists', expenses: 'Clan Funds', memories: 'Highlights', polls: 'Polls & Voting', members: 'Clan Members', invitations: 'Invitations', notifications: 'Notifications', settings: 'App Settings', family: 'Clan Settings', drive: 'Google Drive', files: 'File Manager', search: 'Search', privacy: 'Privacy & Security', help: 'Help & Support', plan: 'Plan' };
 
 KF.setTitle = (t, opts = {}) => {
   const tb = $('#topbar');
   tb.innerHTML = `${opts.back ? `<button class="icon-btn" data-back aria-label="Back">${icon('back')}</button>` : ''}
-    <h1>${t === 'KATARIA FAMILY' ? 'KATARIA <span class="gold">FAMILY</span> ✦' : esc(t)}</h1>
+    <h1>${t === 'HINDU ESPORTS' ? 'HINDU <span class="gold">ESPORTS</span> ✦' : esc(t)}</h1>
     <a class="icon-btn" href="#/search" aria-label="Search" style="color:#fff">${icon('search')}</a>
     <a class="icon-btn" href="#/notifications" aria-label="Notifications" style="color:#fff;position:relative">${icon('bell')}<span class="badge ${KF.state.notifUnread ? '' : 'hidden'}" data-nb style="position:absolute;top:2px;right:0">${KF.state.notifUnread || ''}</span></a>`;
   const b = $('[data-back]', tb); if (b) b.onclick = () => { opts.back === true ? history.back() : (location.hash = opts.back); };
@@ -25,7 +25,7 @@ async function route() {
   const tab = TAB_OF[name] || (TABS.some(t => t[0] === name) ? name : 'home');
   buildNav(tab);
   const sub = !TABS.some(t => t[0] === name);
-  KF.setTitle(TITLES[name] || 'KATARIA FAMILY', { back: sub ? true : false });
+  KF.setTitle(TITLES[name] || 'HINDU ESPORTS', { back: sub ? true : false });
   view.innerHTML = '<div class="center" style="padding:40px"><div class="spinner" style="margin:auto;border-color:var(--line);border-top-color:var(--gold)"></div></div>';
   try { await fn(view, params.map(decodeURIComponent)); }
   catch (e) { view.classList.remove('chatmode'); view.innerHTML = `<div class="empty"><div class="big">⚠️</div>${esc(e.message)}<br><br><button class="btn" onclick="location.reload()">Try again</button></div>`; }

@@ -20,7 +20,7 @@ const CATEGORY_FOLDERS = {
   chat: 'Family Chat Media', photos: 'Family Photos and Videos', plans: 'Family Plans', events: 'Family Events',
   memories: 'Family Memories', documents: 'Shared Documents', shopping: 'Shopping and Other Files',
 };
-const EXTRA_ROOT_NAME = 'KATARIA Family Storage';
+const EXTRA_ROOT_NAME = 'Hindu Esports Storage';
 // Space kept free on the MAIN account so the (tiny) database backups can never fail because photos filled it up.
 const MAIN_RESERVE = (+process.env.MAIN_ACCOUNT_RESERVE_MB || 512) * 1048576;
 const QUOTA_TTL = 300000;
@@ -62,15 +62,15 @@ const tokenCache = new Map(); // ref -> {token, exp}
 async function accessToken(r) {
   const c = tokenCache.get(r); if (c && c.exp > Date.now() + 30000) return c.token;
   const row = getRow(r), extra = !!split(r).acct;
-  if (!row || !row.refresh_enc) throw new HttpError(503, 'Google Drive is not connected. Ask the family owner to connect it in Profile → Google Drive.', 'drive_not_connected');
-  if (row.status === 'expired') throw new HttpError(503, extra ? `The extra Google account ${row.account || ''} has expired. The family owner needs to add it again in Profile → Google Drive.` : 'Google Drive authorisation has expired. The family owner needs to reconnect it in Profile → Google Drive.', 'drive_expired');
+  if (!row || !row.refresh_enc) throw new HttpError(503, 'Google Drive is not connected. Ask the clan leader to connect it in Profile → Google Drive.', 'drive_not_connected');
+  if (row.status === 'expired') throw new HttpError(503, extra ? `The extra Google account ${row.account || ''} has expired. The clan leader needs to add it again in Profile → Google Drive.` : 'Google Drive authorisation has expired. The clan leader needs to reconnect it in Profile → Google Drive.', 'drive_expired');
   try {
     const t = await tokenRequest({ grant_type: 'refresh_token', refresh_token: dec(row.refresh_enc) });
     tokenCache.set(r, { token: t.access_token, exp: Date.now() + t.expires_in * 1000 });
     return t.access_token;
   } catch (e) {
     if (e instanceof HttpError) throw e;
-    if (e.google === 'invalid_grant') { setRow(r, { status: 'expired' }); throw new HttpError(503, extra ? `The extra Google account ${row.account || ''} has expired or was revoked. The family owner needs to add it again.` : 'Google Drive authorisation has expired or was revoked. The family owner needs to reconnect it.', 'drive_expired'); }
+    if (e.google === 'invalid_grant') { setRow(r, { status: 'expired' }); throw new HttpError(503, extra ? `The extra Google account ${row.account || ''} has expired or was revoked. The clan leader needs to add it again.` : 'Google Drive authorisation has expired or was revoked. The clan leader needs to reconnect it.', 'drive_expired'); }
     throw new HttpError(502, 'Google Drive sign-in failed: ' + e.message, 'drive_auth');
   }
 }
@@ -251,7 +251,7 @@ const byFreeDesc = (a, b) => (a.free === b.free ? 0 : a.free < b.free ? 1 : -1);
 
 async function upload(familyId, category, file) {
   const cands = candidates(familyId);
-  if (!cands.length) { await accessToken(familyId); throw new HttpError(503, 'Google Drive is not connected. Ask the family owner to connect it in Profile → Google Drive.', 'drive_not_connected'); }
+  if (!cands.length) { await accessToken(familyId); throw new HttpError(503, 'Google Drive is not connected. Ask the clan leader to connect it in Profile → Google Drive.', 'drive_not_connected'); }
   const need = file.data.length;
   const plan = async () => (await Promise.all(cands.map(async c => ({ ...c, free: await freeSpace(c) })))).filter(c => c.free < 0 || c.free >= need).sort(byFreeDesc);
   let order = await plan();

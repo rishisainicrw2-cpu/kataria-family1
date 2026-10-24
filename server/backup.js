@@ -16,7 +16,7 @@ const MIN_INTERVAL_MS = +process.env.BACKUP_MIN_INTERVAL_MS || 120000;
 const state = { running: false, lastAt: null, lastName: null, lastSize: null, lastError: null, lastAttempt: 0, writesAtLast: -1 };
 
 const disabled = () => process.env.BACKUP_TO_DRIVE === 'off';
-// One backup per server: kept in the Drive of the first family that connected one.
+// One backup per server: kept in the Drive of the first clan that connected one.
 const backupFamily = () => q.get("SELECT family_id FROM drive_config WHERE status='connected' AND refresh_enc IS NOT NULL ORDER BY connected_at, rowid LIMIT 1")?.family_id || null;
 const stamp = () => new Date().toISOString().replace(/[-:]/g, '').replace('T', '-').replace('.', '-').replace('Z', '');
 

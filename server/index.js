@@ -29,7 +29,7 @@ const cfg = require('./config');
   });
 
   server.listen(cfg.PORT, () => {
-    console.log(`KATARIA FAMILY running on port ${cfg.PORT}`);
+    console.log(`HINDU ESPORTS running on port ${cfg.PORT}`);
     console.log(`Data directory: ${cfg.DATA_DIR}`);
     console.log(`Google Drive OAuth: ${cfg.GOOGLE_CLIENT_ID && cfg.GOOGLE_CLIENT_SECRET && cfg.BASE_URL ? 'configured' : 'NOT configured (set GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, BASE_URL)'}`);
     if (!process.env.SECRET_KEY) console.log('WARNING: SECRET_KEY is not set — it is stored in the data directory. On a host with an ephemeral disk set SECRET_KEY, or Drive tokens and backups cannot be decrypted after a restart.');
