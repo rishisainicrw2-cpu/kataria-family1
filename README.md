@@ -79,6 +79,33 @@ Your folder ID `19c1XVBgxeafcZpllGh2GA3ap2wk6BHUO` is already built in.
 6. In the app: **Profile → Google Drive → Connect**, sign in with the account that owns the folder, allow access.
    The app verifies the folder, creates the 7 sub-folders if missing, and starts storing uploads. If it can't open your folder, it says so — it never silently uses another location.
 
+### Optional — pool several Google accounts into one storage
+
+Each free Google account has 15 GB. You can connect more of **your own** accounts and the app treats them as one library
+(e.g. 5 accounts = 75 GB). Google itself cannot merge accounts, so the app does it:
+
+- New files go to whichever account has the **most free space**; if that account turns out to be full, the next one is tried.
+- Every file remembers which account holds it, so downloads, previews and video seeking come from the right place.
+- The **main** account (the one with your folder ID) also holds the database backups. The app keeps ~512 MB free on it
+  (`MAIN_ACCOUNT_RESERVE_MB`) so photos can never crowd out the backups.
+- A single file is never split, so one file must fit in one account's free space.
+
+How to add accounts:
+
+1. In the Google Cloud **OAuth consent screen → Audience → Test users**, add each extra account's email (needed while the app is in *Testing*).
+2. In the app: **Profile → Google Drive → Add another Google account**, choose the account on Google's screen, allow access.
+   The app creates a `KATARIA Family Storage` folder with the 7 sub-folders inside that account.
+3. Repeat for each account. Adding the same account twice is refused (it would count its 15 GB twice).
+
+Good to know:
+
+- **Do not leave the app in Testing mode.** Testing-mode logins expire after 7 days, for *every* account. Under **Audience** choose
+  **Publish app** (you do not need Google's verification for personal use; you just click through an "unverified app" warning once per account).
+- An extra account can only be removed when it holds no files (otherwise those files would become unreachable). Delete the files first.
+- The extra accounts' logins are stored encrypted inside the database, and the database is backed up (encrypted) to the main account, so only the single `DRIVE_RESTORE_KEY` is ever needed.
+- If an account's login expires, files on the other accounts keep working; sign in with the same account again via *Add another Google account* to restore it.
+- Use only accounts you own. Creating many accounts only to get free space can break Google's terms and Google may lock them.
+
 Files are never made public. Family members download through the app, which checks their permissions first.
 
 ## Part 4 — Install on your Android phone

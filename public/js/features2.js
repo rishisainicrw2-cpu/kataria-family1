@@ -127,6 +127,14 @@ KF.views.drive = async view => {
       ${!bk.persistentSecret ? '<p class="small" style="color:var(--danger)"><b>SECRET_KEY is not set on the server.</b> Without it, backups cannot be restored after a restart. Add it in your host settings.</p>' : ''}
       ${!bk.restoreKeySet ? '<p class="small" style="color:var(--danger)"><b>Restore key not saved on your host yet.</b> Tap “Show restore key” and add it as <code>DRIVE_RESTORE_KEY</code> in your host’s environment settings, otherwise a restart can lose your data.</p>' : bk.restoreKeyCurrent ? '<p class="small" style="color:var(--ok)">Restore key is set on your host ✓</p>' : '<p class="small" style="color:var(--danger)">The restore key on your host is out of date (Drive was reconnected). Show the key again and update <code>DRIVE_RESTORE_KEY</code>.</p>'}
       <div class="row wrap" style="margin-top:10px"><button class="btn small gold" data-bk>Back up now</button><button class="btn small ghost" data-rk>Show restore key</button></div>`}</div>`;
+  const pct = (u, l) => l ? Math.min(100, Math.round(u / l * 100)) : 0;
+  const bar = (u, l) => `<div style="height:8px;border-radius:99px;background:rgba(127,127,127,.25);overflow:hidden;margin:6px 0"><div style="height:100%;width:${pct(u, l)}%;background:var(--gold,#e8b84a)"></div></div>`;
+  const poolCard = !s.connected ? '' : `<div class="card"><h3>Combined storage</h3>
+    ${s.pool ? `<p class="small"><b>${fmtSize(s.pool.used)}</b> used of <b>${s.pool.limit ? fmtSize(s.pool.limit) : 'unlimited'}</b> across ${s.pool.accounts} Google account${s.pool.accounts === 1 ? '' : 's'}</p>${bar(s.pool.used, s.pool.limit)}` : ''}
+    <div class="small" style="margin-top:8px"><b>Main</b> · ${esc(s.account || 'account')} ${s.quota ? `<span class="muted">· ${fmtSize(s.quota.used)} / ${s.quota.limit ? fmtSize(s.quota.limit) : 'unlimited'}</span>` : ''}</div>
+    ${(s.accounts || []).map(a => { const bad = a.status === 'expired' || !a.folderOk; return `<div class="row" style="justify-content:space-between;align-items:center;margin-top:8px;gap:8px"><div class="small" style="min-width:0;word-break:break-all"><b>${esc(a.account || 'Google account')}</b><br><span class="${bad ? '' : 'muted'}" style="${bad ? 'color:var(--danger)' : ''}">${a.status === 'expired' ? 'Expired — use “Add another Google account” to sign in with it again' : a.folderOk ? `${fmtSize(a.used)} / ${a.limit ? fmtSize(a.limit) : 'unlimited'}` : esc(a.message)}</span></div><button class="btn small danger" data-rmacct="${esc(a.id)}">Remove</button></div>`; }).join('')}
+    <p class="small muted" style="margin-top:10px">New photos and files are saved to whichever account has the most free space, and the app shows them all as one library. Use only your own Google accounts, each one once.</p>
+    <div class="row wrap" style="margin-top:10px"><a class="btn gold" href="/api/drive/connect?add=1" style="text-decoration:none">Add another Google account</a></div></div>`;
   view.innerHTML = `<div class="gap fade"><div class="card"><h3>Storage status</h3>
     <div class="row"><span class="pill ${s.connected && s.folderOk ? 'completed' : s.configured ? 'in_progress' : 'cancelled'}">${s.connected && s.folderOk ? 'Connected' : s.connected ? 'Folder problem' : s.configured ? 'Not connected' : 'Not configured'}</span></div>
     <p class="small">Root folder ID:<br><code style="word-break:break-all">${esc(s.rootFolderId)}</code></p>
@@ -138,6 +146,7 @@ KF.views.drive = async view => {
       ${s.configured && !s.connected ? '<a class="btn gold" href="/api/drive/connect" style="text-decoration:none">Connect Google Drive</a>' : ''}
       ${s.connected ? '<button class="btn small ghost" data-verify>Re-check folder</button><button class="btn small danger" data-disc>Disconnect</button>' : ''}</div></div>
     ${!s.configured ? `<div class="card"><h3>One-time setup needed</h3><p class="small">The server owner must add Google OAuth credentials (free). Step by step instructions are in <b>README.md → “Connect Google Drive”</b>. Until then, uploads are refused with a clear error — nothing is stored anywhere else.</p></div>` : ''}
+    ${poolCard}
     ${backupCard}
     <div class="card small muted"><b>How access works:</b> your family never gets direct access to your Drive. Files are uploaded and downloaded through this app's server using your connected account, and the app checks each person's family membership before every download. The Drive folder is never made public.</div></div>`;
   if (q.get('drive')) { toast(q.get('drive') === 'connected' ? 'Google Drive connected' : 'Drive: ' + q.get('drive')); history.replaceState(null, '', '/#/drive'); }
@@ -153,6 +162,7 @@ KF.views.drive = async view => {
       });
     } catch (e) { toast(e.message); }
   };
+  $$('[data-rmacct]', view).forEach(b => b.onclick = async () => { if (await confirmSheet('Remove this Google account from the storage pool? This only works when no files are stored in it.', 'Remove', true)) try { await api('/drive/accounts/' + encodeURIComponent(b.dataset.rmacct) + '/disconnect', { method: 'POST' }); toast('Account removed'); route(); } catch (e) { toast(e.message); } });
   const d = $('[data-disc]', view); if (d) d.onclick = async () => { if (await confirmSheet('Disconnect Google Drive? Existing files stay in Drive but become unavailable in the app until you reconnect.', 'Disconnect', true)) try { await api('/drive/disconnect', { method: 'POST' }); route(); } catch (e) { toast(e.message); } };
 };
 

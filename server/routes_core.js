@@ -147,7 +147,7 @@ function removeFromFamily(userId, fid) {
   });
   ws.broadcastFamily(fid, { type: 'family.changed' });
 }
-async function deleteDriveFiles(fid, files) { for (const f of files) { try { await drive.remove(fid, f.drive_id); } catch (_) {} } }
+async function deleteDriveFiles(fid, files) { for (const f of files) { try { await drive.remove(drive.ref(fid, f.drive_acct), f.drive_id); } catch (_) {} } }
 
 route('DELETE', '/api/me', async ctx => {
   const u = q.get('SELECT * FROM users WHERE id=?', ctx.user.id);
@@ -221,9 +221,10 @@ route('GET', '/api/family/logo', ctx => {
   ctx.res.writeHead(200, { 'Content-Type': f.logo_mime, 'Cache-Control': 'private, max-age=3600' }); ctx.res.end(Buffer.from(f.logo)); ctx.handled = true;
 });
 async function deleteFamily(fid) {
-  const files = q.all('SELECT drive_id FROM files WHERE family_id=?', fid);
+  const files = q.all('SELECT drive_id, drive_acct FROM files WHERE family_id=?', fid);
   const ids = L.familyMemberIds(fid);
   await deleteDriveFiles(fid, files);
+  try { await drive.disconnectExtras(fid); } catch (_) {}
   try { await drive.disconnect(fid); } catch (_) {}
   q.run('DELETE FROM families WHERE id=?', fid);
   ids.forEach(id => ws.sendTo(id, { type: 'family.changed' }));
@@ -430,8 +431,8 @@ route('POST', '/api/files', async ctx => {
   const name = cleanName(file.filename), mime = cleanMime(file.mime);
   const up = await drive.upload(fid, category, { filename: name, mime, data: file.data }); // throws clear errors if Drive is unavailable
   const id = uid();
-  q.run('INSERT INTO files(id,family_id,drive_id,name,mime,size,category,uploaded_by,caption,album_id,plan_id,room_id,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)',
-    id, fid, up.id, name, mime, file.data.length, category, ctx.user.id, L.str(b.caption, { max: 300 }), albumId, planId, roomId, now());
+  q.run('INSERT INTO files(id,family_id,drive_id,drive_acct,name,mime,size,category,uploaded_by,caption,album_id,plan_id,room_id,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+    id, fid, up.id, up.acct || null, name, mime, file.data.length, category, ctx.user.id, L.str(b.caption, { max: 300 }), albumId, planId, roomId, now());
   if (!roomId) L.bump(fid, category === 'memories' ? 'memories' : category === 'plans' ? 'plan' : 'files', ctx.user.id);
   return L.fileDto(q.get('SELECT * FROM files WHERE id=?', id), ctx.user);
 });
@@ -443,7 +444,7 @@ route('GET', '/api/files', ctx => {
 });
 route('GET', '/api/files/:id/content', async ctx => {
   const f = fileFor(ctx);
-  const r = await drive.download(ctx.user.familyId, f.drive_id, ctx.req.headers.range);
+  const r = await drive.download(drive.ref(ctx.user.familyId, f.drive_acct), f.drive_id, ctx.req.headers.range);
   const inline = SAFE_INLINE.test(f.mime) && !ctx.query.download;
   const h = { 'Content-Type': SAFE_INLINE.test(f.mime) ? f.mime : 'application/octet-stream', 'Content-Disposition': `${inline ? 'inline' : 'attachment'}; filename*=UTF-8''${encodeURIComponent(f.name)}`, 'Cache-Control': 'private, max-age=3600', 'Accept-Ranges': 'bytes' };
   for (const k of ['content-length', 'content-range']) if (r.headers.get(k)) h[k] = r.headers.get(k);
@@ -455,9 +456,10 @@ route('GET', '/api/files/:id/thumb', async ctx => {
   const f = fileFor(ctx); if (!f.mime.startsWith('image/')) throw notFound();
   let t = thumbCache.get(f.id);
   if (!t) {
-    let r = null; try { r = await drive.thumbnail(ctx.user.familyId, f.drive_id); } catch (_) {}
+    const dref = drive.ref(ctx.user.familyId, f.drive_acct);
+    let r = null; try { r = await drive.thumbnail(dref, f.drive_id); } catch (_) {}
     if (r) t = { buf: Buffer.from(await r.arrayBuffer()), type: r.headers.get('content-type') || 'image/jpeg' };
-    else if (f.size < 8 * 1048576 && SAFE_INLINE.test(f.mime)) { const d = await drive.download(ctx.user.familyId, f.drive_id); t = { buf: Buffer.from(await d.arrayBuffer()), type: f.mime }; }
+    else if (f.size < 8 * 1048576 && SAFE_INLINE.test(f.mime)) { const d = await drive.download(dref, f.drive_id); t = { buf: Buffer.from(await d.arrayBuffer()), type: f.mime }; }
     else throw notFound();
     if (thumbCache.size > 150) thumbCache.delete(thumbCache.keys().next().value); thumbCache.set(f.id, t);
   }
@@ -466,7 +468,7 @@ route('GET', '/api/files/:id/thumb', async ctx => {
 route('DELETE', '/api/files/:id', async ctx => {
   const f = fileFor(ctx);
   if (f.uploaded_by !== ctx.user.id && !L.isAdmin(ctx.user)) throw forbidden('Only the uploader or an administrator can delete this file.');
-  await drive.remove(ctx.user.familyId, f.drive_id);
+  await drive.remove(drive.ref(ctx.user.familyId, f.drive_acct), f.drive_id);
   tx(() => { q.run('UPDATE messages SET file_id=NULL WHERE file_id=?', f.id); q.run('DELETE FROM files WHERE id=?', f.id); });
   thumbCache.delete(f.id); L.bump(ctx.user.familyId, 'memories', ctx.user.id);
 });
@@ -477,7 +479,7 @@ route('GET', '/api/drive/connect', ctx => {
   L.needOwner(ctx.user); ctx.handled = true;
   const to = loc => { ctx.res.writeHead(302, { Location: loc }); ctx.res.end(); };
   if (!drive.configured()) return to('/?drive=' + encodeURIComponent('not configured on server') + '#/drive');
-  to(drive.authUrl(ctx.user.id, ctx.user.familyId));
+  to(drive.authUrl(ctx.user.id, ctx.user.familyId, ctx.query.add === '1')); // add=1 → sign in with ANOTHER Google account for the storage pool
 });
 route('GET', '/api/drive/callback', async ctx => {
   ctx.handled = true; L.needOwner(ctx.user);
@@ -490,6 +492,7 @@ route('GET', '/api/drive/callback', async ctx => {
 });
 route('POST', '/api/drive/setup', async ctx => { L.needOwner(ctx.user); return drive.setup(ctx.user.familyId); });
 route('POST', '/api/drive/disconnect', async ctx => { L.needOwner(ctx.user); await drive.disconnect(ctx.user.familyId); });
+route('POST', '/api/drive/accounts/:id/disconnect', async ctx => { L.needOwner(ctx.user); await drive.disconnectExtra(ctx.user.familyId, ctx.params.id); });
 
 /* ---- Database backups to Drive (owner only) ---- */
 route('GET', '/api/drive/backup', ctx => { L.needOwner(ctx.user); return backup.status(ctx.user.familyId); });

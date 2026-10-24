@@ -134,7 +134,17 @@ CREATE TABLE IF NOT EXISTS drive_config(
 
 CREATE TABLE IF NOT EXISTS push_subs(
   endpoint TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, sub TEXT NOT NULL);
+
+-- Additional Google accounts pooled into the family's storage. The first account stays in drive_config (it also holds the DB backups).
+CREATE TABLE IF NOT EXISTS drive_extra(
+  id TEXT PRIMARY KEY, family_id TEXT NOT NULL REFERENCES families(id) ON DELETE CASCADE, refresh_enc TEXT NOT NULL, account TEXT,
+  root_folder_id TEXT, folder_ids TEXT DEFAULT '{}', status TEXT DEFAULT 'connected', connected_at INTEGER);
+
+CREATE INDEX IF NOT EXISTS ix_drive_extra_family ON drive_extra(family_id);
 `);
+
+// Migration: which pooled account holds each file (NULL = the main account). Runs after a restore too, so older backups upgrade cleanly.
+if (!db.prepare('PRAGMA table_info(files)').all().some(c => c.name === 'drive_acct')) db.exec('ALTER TABLE files ADD COLUMN drive_acct TEXT');
 
 const stats = { writes: 0 };   // bumped on every write; the Drive backup job uses it to know when something changed
 const cache = new Map();

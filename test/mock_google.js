@@ -6,12 +6,15 @@ const crypto = require('crypto');
 
 const ROOT_ID = '19c1XVBgxeafcZpllGh2GA3ap2wk6BHUO';
 const FOLDER = 'application/vnd.google-apps.folder';
+const MAIN = 'family.owner@example.com';   // account behind code 'good-code'; code 'good-code-NAME' signs in NAME@example.com
+const BASE_LIMIT = 16106127360, BASE_USAGE = 1048576;
 
 function startMock(port) {
   const st = {
     files: new Map(),                 // id -> {id,name,mimeType,parents,data,trashed}
     refreshTokens: new Map(),         // token -> {revoked}
-    access: new Set(),
+    access: new Map(),                // access token -> account email
+    limits: {},                       // account -> quota limit override (bytes)
     mode: 'ok',                       // ok | down | quota
     rateLimitNext: 0,                 // answer the next N Drive calls with 429
     rootWritable: true,
@@ -19,9 +22,9 @@ function startMock(port) {
     apiCalls: 0,
   };
   const reset = () => {
-    st.files.clear(); st.refreshTokens.clear(); st.access.clear();
+    st.files.clear(); st.refreshTokens.clear(); st.access.clear(); st.limits = {};
     st.mode = 'ok'; st.rateLimitNext = 0; st.rootWritable = true; st.log = []; st.apiCalls = 0;
-    st.files.set(ROOT_ID, { id: ROOT_ID, name: 'KATARIA FAMILY (Drive)', mimeType: FOLDER, parents: [], trashed: false });
+    st.files.set(ROOT_ID, { id: ROOT_ID, name: 'KATARIA FAMILY (Drive)', mimeType: FOLDER, parents: [], trashed: false, owner: MAIN });
   };
   reset();
 
@@ -53,10 +56,10 @@ function startMock(port) {
     const p = u.pathname;
     try {
       // ---- control channel for tests ----
-      if (p === '/__ctl') { const b = JSON.parse((await readBody(req)).toString() || '{}'); if (b.reset) reset(); for (const k of ['mode', 'rateLimitNext', 'rootWritable']) if (k in b) st[k] = b[k]; if (b.revoke) for (const v of st.refreshTokens.values()) v.revoked = true; if (b.plant) { const id = newId(); st.files.set(id, { id, name: b.plant.name, mimeType: 'application/octet-stream', parents: [b.plant.parent], data: Buffer.from(b.plant.data, 'base64'), trashed: false }); } return send(res, 200, { ok: true }); }
+      if (p === '/__ctl') { const b = JSON.parse((await readBody(req)).toString() || '{}'); if (b.reset) reset(); for (const k of ['mode', 'rateLimitNext', 'rootWritable']) if (k in b) st[k] = b[k]; if (b.revoke) for (const v of st.refreshTokens.values()) v.revoked = true; if (b.limit) st.limits[b.limit.acct] = b.limit.bytes; if (b.revokeAcct) for (const v of st.refreshTokens.values()) if (v.account === b.revokeAcct) v.revoked = true; if (b.plant) { const id = newId(); st.files.set(id, { id, name: b.plant.name, mimeType: 'application/octet-stream', parents: [b.plant.parent], data: Buffer.from(b.plant.data, 'base64'), trashed: false, owner: MAIN }); } return send(res, 200, { ok: true }); }
       if (p === '/__state') return send(res, 200, {
-        files: [...st.files.values()].map(f => ({ id: f.id, name: f.name, mimeType: f.mimeType, parents: f.parents, size: f.data ? f.data.length : 0, trashed: f.trashed, data: f.data ? f.data.toString('base64') : undefined })),
-        log: st.log, apiCalls: st.apiCalls, refreshTokens: [...st.refreshTokens.keys()], revoked: [...st.refreshTokens].filter(([, v]) => v.revoked).map(([k]) => k), accessTokens: [...st.access],
+        files: [...st.files.values()].map(f => ({ id: f.id, name: f.name, mimeType: f.mimeType, parents: f.parents, size: f.data ? f.data.length : 0, trashed: f.trashed, owner: f.owner, data: f.data ? f.data.toString('base64') : undefined })),
+        log: st.log, apiCalls: st.apiCalls, refreshTokens: [...st.refreshTokens.keys()], revoked: [...st.refreshTokens].filter(([, v]) => v.revoked).map(([k]) => k), accessTokens: [...st.access.keys()], tokens: [...st.refreshTokens].map(([token, v]) => ({ token, account: v.account, revoked: v.revoked })),
       });
 
       // ---- OAuth ----
@@ -65,15 +68,16 @@ function startMock(port) {
         const f = new URLSearchParams((await readBody(req)).toString());
         if (f.get('client_id') !== 'test-client-id' || f.get('client_secret') !== 'test-client-secret') return send(res, 401, { error: 'invalid_client' });
         if (f.get('grant_type') === 'authorization_code') {
-          if (f.get('code') !== 'good-code') return send(res, 400, { error: 'invalid_grant', error_description: 'bad code' });
-          const rt = 'RT-' + newId(); st.refreshTokens.set(rt, { revoked: false });
-          const at = 'AT-' + newId(); st.access.add(at);
+          if (!/^good-code(-\w+)?$/.test(f.get('code') || '')) return send(res, 400, { error: 'invalid_grant', error_description: 'bad code' });
+          const m = f.get('code').match(/^good-code-(\w+)$/); const account = m ? m[1] + '@example.com' : MAIN;
+          const rt = 'RT-' + newId(); st.refreshTokens.set(rt, { revoked: false, account });
+          const at = 'AT-' + newId(); st.access.set(at, account);
           return send(res, 200, { access_token: at, refresh_token: rt, expires_in: 3600, token_type: 'Bearer' });
         }
         if (f.get('grant_type') === 'refresh_token') {
           const rt = st.refreshTokens.get(f.get('refresh_token'));
           if (!rt || rt.revoked) return send(res, 400, { error: 'invalid_grant', error_description: 'Token has been expired or revoked.' });
-          const at = 'AT-' + newId(); st.access.add(at);
+          const at = 'AT-' + newId(); st.access.set(at, rt.account || MAIN);
           return send(res, 200, { access_token: at, expires_in: 3600, token_type: 'Bearer' });
         }
         return send(res, 400, { error: 'unsupported_grant_type' });
@@ -84,12 +88,15 @@ function startMock(port) {
       if (p.startsWith('/drive/v3') || p.startsWith('/upload/drive/v3')) {
         st.apiCalls++; st.log.push(req.method + ' ' + p);
         const bearer = (req.headers.authorization || '').replace(/^Bearer /, '');
-        if (!st.access.has(bearer)) return send(res, 401, { error: { code: 401, message: 'Invalid Credentials' } });
+        const acct = st.access.get(bearer);
+        if (!acct) return send(res, 401, { error: { code: 401, message: 'Invalid Credentials' } });
         if (st.mode === 'down') return send(res, 503, { error: { code: 503, message: 'Service Unavailable' } });
         if (st.rateLimitNext > 0) { st.rateLimitNext--; return send(res, 429, { error: { code: 429, message: 'Rate Limit Exceeded', errors: [{ reason: 'rateLimitExceeded' }] } }); }
         const rest = p.replace('/upload/drive/v3', '').replace('/drive/v3', '');
 
-        if (rest === '/about') return send(res, 200, { user: { emailAddress: 'family.owner@example.com' }, storageQuota: { limit: '16106127360', usage: '1048576' } });
+        const used = () => BASE_USAGE + [...st.files.values()].filter(f => f.owner === acct && f.data).reduce((n, f) => n + f.data.length, 0);
+        const limit = () => st.limits[acct] ?? BASE_LIMIT;
+        if (rest === '/about') return send(res, 200, { user: { emailAddress: acct }, storageQuota: { limit: String(limit()), usage: String(used()) } });
 
         if (rest === '/files' && req.method === 'GET') {
           const qs = u.searchParams.get('q') || '';
@@ -98,32 +105,32 @@ function startMock(port) {
           const nameEq = (qs.match(/name='((?:[^'\\]|\\.)*)'/) || [])[1];
           const mimeEq = (qs.match(/mimeType='([^']+)'/) || [])[1];
           const mimeNe = (qs.match(/mimeType!='([^']+)'/) || [])[1];
-          const out = !parent ? [] : [...st.files.values()].filter(f => f.parents.includes(parent) && !f.trashed
+          const out = !parent ? [] : [...st.files.values()].filter(f => f.owner === acct && f.parents.includes(parent) && !f.trashed
             && (nameEq === undefined || f.name === nameEq.replace(/\\(.)/g, '$1')) && (!mimeEq || f.mimeType === mimeEq) && (!mimeNe || f.mimeType !== mimeNe)).map(f => ({ id: f.id, name: f.name }));
           return send(res, 200, { files: out });
         }
         if (rest === '/files' && req.method === 'POST') {
           const raw = await readBody(req);
           if (u.pathname.startsWith('/upload')) {
-            if (st.mode === 'quota') return send(res, 403, { error: { code: 403, message: 'The user storage quota has been exceeded.', errors: [{ reason: 'storageQuotaExceeded' }] } });
+            if (st.mode === 'quota' || used() + Math.max(0, raw.length - 300) > limit()) return send(res, 403, { error: { code: 403, message: 'The user storage quota has been exceeded.', errors: [{ reason: 'storageQuotaExceeded' }] } });
             const bm = (req.headers['content-type'] || '').match(/boundary=(.+)$/);
             const parts = parseRelated(raw, bm[1]);
             const meta = JSON.parse(parts[0].body.toString());
             const parent = st.files.get(meta.parents?.[0]);
-            if (!parent || parent.mimeType !== FOLDER) return send(res, 404, { error: { code: 404, message: 'File not found: parent' } });
+            if (!parent || parent.owner !== acct || parent.mimeType !== FOLDER) return send(res, 404, { error: { code: 404, message: 'File not found: parent' } });
             const mime = (parts[1].headers.match(/Content-Type:\s*(\S+)/i) || [])[1] || 'application/octet-stream';
-            const id = newId(); st.files.set(id, { id, name: meta.name, mimeType: mime, parents: meta.parents, data: Buffer.from(parts[1].body), trashed: false });
+            const id = newId(); st.files.set(id, { id, name: meta.name, mimeType: mime, parents: meta.parents, data: Buffer.from(parts[1].body), trashed: false, owner: acct });
             return send(res, 200, { id, name: meta.name, size: String(parts[1].body.length), mimeType: mime });
           }
           const meta = JSON.parse(raw.toString());
           if (!st.rootWritable && (meta.parents || []).includes(ROOT_ID)) return send(res, 403, { error: { code: 403, message: 'insufficient permissions', errors: [{ reason: 'forbidden' }] } });
-          const id = newId(); st.files.set(id, { id, name: meta.name, mimeType: meta.mimeType, parents: meta.parents || [], trashed: false });
+          const id = newId(); st.files.set(id, { id, name: meta.name, mimeType: meta.mimeType, parents: meta.parents || [], trashed: false, owner: acct });
           return send(res, 200, { id });
         }
         const fm = rest.match(/^\/files\/([^/]+)$/);
         if (fm) {
           const f = st.files.get(fm[1]);
-          if (!f) return send(res, 404, { error: { code: 404, message: 'File not found: ' + fm[1], errors: [{ reason: 'notFound' }] } });
+          if (!f || f.owner !== acct) return send(res, 404, { error: { code: 404, message: 'File not found: ' + fm[1], errors: [{ reason: 'notFound' }] } });
           if (req.method === 'DELETE') { st.files.delete(f.id); res.writeHead(204); return res.end(); }
           if (u.searchParams.get('alt') === 'media') {
             const range = (req.headers.range || '').match(/^bytes=(\d+)-(\d*)$/);
