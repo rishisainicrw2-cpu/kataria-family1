@@ -155,3 +155,9 @@ h1,h2,h3{font-family:"Roboto Condensed","sans-serif-condensed","Arial Narrow",Im
 .screen .tag{font-style:normal;letter-spacing:.22em;text-transform:uppercase;font-size:.78rem}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .quick{border-color:rgba(242,106,15,.28)}
+/* Credit line shown under every sign-in screen */
+#auth::after{content:"App run by RISHI";display:block;margin-top:26px;padding-bottom:6px;text-align:center;font-size:.78rem;font-weight:800;letter-spacing:.2em;text-transform:uppercase;color:var(--gold-l);opacity:.85}
+/* Sign-in screens: centred when they fit, but start at the top and scroll when the phone screen is short (no cut-off logo) */
+#auth{justify-content:flex-start}
+#auth>:first-child{margin-top:auto}
+#auth::after{margin-bottom:auto}
