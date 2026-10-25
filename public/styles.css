@@ -282,3 +282,5 @@ input:focus,select:focus,textarea:focus{border-color:var(--gold);box-shadow:0 0 
 .mention.me{background:rgba(255,178,30,.34);box-shadow:0 0 10px rgba(255,178,30,.35)}
 :root:not([data-theme=dark]) .msg:not(.me) .mention{color:#a63a05}
 .msg.tagged{border-left:3px solid var(--gold);box-shadow:var(--spec),0 0 16px rgba(255,178,30,.28)}
+
+.btn.install{background:linear-gradient(135deg,#ff8a35,var(--blue-d));color:#fff;box-shadow:var(--spec),0 6px 22px rgba(242,106,15,.55)}

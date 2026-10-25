@@ -128,6 +128,17 @@ KF.askAlerts = askAlerts;
 
 /* PWA install prompt (Android Chrome) */
 window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); KF.installEvt = e; });
+KF.isInstalled = () => !!(navigator.standalone || matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches);
+window.addEventListener('appinstalled', () => { KF.installEvt = null; toast('App installed ✓ Open it from your home screen', 5000); document.querySelectorAll('[data-install]').forEach(b => b.classList.add('hidden')); });
+// Install the app: Android Chrome installs it as a real app (own icon, full screen, no browser bar). iPhone and other browsers get the steps.
+KF.installApp = async () => {
+  if (KF.installEvt) { const ev = KF.installEvt; KF.installEvt = null; try { await ev.prompt(); } catch (_) {} return; }
+  const ios = /iPhone|iPad|iPod/.test(navigator.userAgent);
+  sheet(`<div class="center"><div style="font-size:2.4rem">📲</div><h2>Install Hindu Esports</h2>
+    ${ios ? '<p class="muted">1. Tap the <b>Share</b> button (square with an arrow)<br>2. Tap <b>Add to Home Screen</b><br>3. Tap <b>Add</b></p>'
+          : '<p class="muted">1. Tap the <b>⋮</b> menu in Chrome (top right)<br>2. Tap <b>Install app</b> (or <b>Add to Home screen</b>)<br>3. Tap <b>Install</b></p>'}
+    <p class="small muted">Then open <b>Hindu Esports</b> from your home screen.</p><button class="btn gold block" data-ok>OK</button></div>`, (s, close) => { $('[data-ok]', s).onclick = close; });
+};
 if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
 boot();

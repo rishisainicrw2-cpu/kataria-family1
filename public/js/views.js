@@ -11,10 +11,12 @@ KF.showAuth = (mode = 'welcome', note = '') => {
   if (mode === 'welcome') {
     el.innerHTML = `${brand}<div class="panel gap">
       <p class="center" style="margin:0;color:#ffd9bf">A private space for your clan to chat, plan matches and share highlights.</p>
+      ${KF.isInstalled() ? '' : '<button class="btn install block" data-install>📲 Install app</button>'}
       <button class="btn gold block" data-m="register">Create account</button>
       <button class="btn ghost block" style="color:#fff;border-color:rgba(255,255,255,.3)" data-m="login">I already have an account</button>
       ${inviteCode ? `<p class="small center" style="color:var(--gold-l);margin:0">You were invited with code <b>${esc(inviteCode)}</b>. Register or log in to join.</p>` : ''}</div>`;
     $$('[data-m]', el).forEach(b => b.onclick = () => KF.showAuth(b.dataset.m));
+    const ib = $('[data-install]', el); if (ib) ib.onclick = () => KF.installApp();
   } else if (mode === 'login' || mode === 'register') {
     const reg = mode === 'register';
     el.innerHTML = `${brand}<form class="panel" novalidate>
