@@ -120,6 +120,9 @@ const fmtSize = n => {
   return Math.max(1, Math.round(n / 1024)) + ' KB';
 };
 const money = n => (KF.state.family?.currency || '₹') + Number(n || 0).toLocaleString(undefined, { maximumFractionDigits: 2 });
+// Clan ranks: Clan Leader > Co-Leader > Elite > Member
+const RANKS = { owner: { label: 'Clan Leader', icon: '👑', cls: 'leader', n: 0 }, admin: { label: 'Co-Leader', icon: '🛡️', cls: 'coleader', n: 1 }, elite: { label: 'Elite', icon: '⭐', cls: 'elite', n: 2 }, member: { label: 'Member', icon: '🎮', cls: 'plain', n: 3 } };
+const rankOf = u => RANKS[!u ? 'member' : u.role === 'owner' ? 'owner' : u.role === 'admin' ? 'admin' : u.elite ? 'elite' : 'member'];
 const initials = n => (n || '?').trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase();
 const member = id => KF.state.members.find(m => m.id === id);
 function avatar(u, cls = '') {
@@ -191,4 +194,4 @@ async function shrinkImage(file, max = 512, quality = 0.85) {
   if (!blob) throw new Error('Could not prepare the picture. Please try another one.');
   return new File([blob], 'profile.jpg', { type: 'image/jpeg' });
 }
-Object.assign(window, { $, $$, esc, h, icon, toast, shrinkImage, sheet, confirmSheet, formSheet, fmtTime, fmtDate, fmtDT, fmtSize, money, initials, member, avatar, localISO, uploadFile, pickFile, api });
+Object.assign(window, { RANKS, rankOf, $, $$, esc, h, icon, toast, shrinkImage, sheet, confirmSheet, formSheet, fmtTime, fmtDate, fmtDT, fmtSize, money, initials, member, avatar, localISO, uploadFile, pickFile, api });

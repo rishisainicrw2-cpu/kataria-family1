@@ -36,7 +36,7 @@ KF.route = route;
 async function refreshFamily() {
   const f = await api('/family');
   KF.state.family = f.family; KF.state.members = f.members;
-  KF.state.me = { ...KF.state.me, role: f.me.role, perms: f.me.perms };
+  KF.state.me = { ...KF.state.me, role: f.me.role, elite: f.me.elite, perms: f.me.perms };
   KF.state.online = new Set(f.online);
   applyTheme();
 }

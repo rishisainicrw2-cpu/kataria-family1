@@ -102,6 +102,12 @@ async function register(name, email) {
   check('member cannot promote anyone', (await ravi.patch('/api/members/' + meeraId, { role: 'admin' })).status === 403);
   check('member cannot remove members', (await ravi.del('/api/members/' + meeraId)).status === 403);
   check('owner promotes Ravi to admin', (await asha.patch('/api/members/' + raviId, { role: 'admin' })).status === 200);
+  check('owner makes Meera Elite', (await asha.patch('/api/members/' + meeraId, { tier: 'elite' })).status === 200);
+  check('Elite shows in the members list but stays a regular member', await (async () => { const f = (await asha.get('/api/family')).data; const m = f.members.find(x => x.id === meeraId); return m.role === 'member' && m.elite === true; })());
+  check('Elite gets no admin powers', (await meera.del('/api/members/' + raviId)).status === 403);
+  check('Co-Leader can set a member Elite or back', (await ravi.patch('/api/members/' + meeraId, { tier: 'member' })).status === 200);
+  check('Co-Leader cannot appoint another Co-Leader', (await ravi.patch('/api/members/' + meeraId, { tier: 'admin' })).status === 403);
+  check('bad rank rejected', (await asha.patch('/api/members/' + meeraId, { tier: 'god' })).status === 400);
   check('admin cannot remove the owner', (await ravi.del('/api/members/' + ashaId)).status === 403);
   check('admin cannot create admin invites', (await ravi.post('/api/invites', { role: 'admin' })).status === 403);
   check('owner can rename family', (await asha.patch('/api/family', { name: 'Kataria Family ✦' })).status === 200);

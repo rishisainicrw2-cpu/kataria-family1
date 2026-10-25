@@ -147,6 +147,8 @@ CREATE INDEX IF NOT EXISTS ix_drive_extra_family ON drive_extra(family_id);
 if (!db.prepare('PRAGMA table_info(files)').all().some(c => c.name === 'drive_acct')) db.exec('ALTER TABLE files ADD COLUMN drive_acct TEXT');
 // Game IDs shown on a player's profile (BGMI UID, Free Fire ID). Optional text, digits only (checked in the API).
 for (const col of ['bgmi_uid', 'ff_uid']) if (!db.prepare('PRAGMA table_info(users)').all().some(c => c.name === col)) db.exec(`ALTER TABLE users ADD COLUMN ${col} TEXT`);
+// Elite = a recognised rank between Member and Co-Leader. It is a badge only: it gives no extra powers (role stays 'member').
+if (!db.prepare('PRAGMA table_info(memberships)').all().some(c => c.name === 'elite')) db.exec('ALTER TABLE memberships ADD COLUMN elite INTEGER NOT NULL DEFAULT 0');
 
 const stats = { writes: 0 };   // bumped on every write; the Drive backup job uses it to know when something changed
 const cache = new Map();

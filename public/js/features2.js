@@ -1,5 +1,4 @@
 /* Members, invitations, notifications, profile, settings, clan settings, Drive, files, search, privacy, help */
-const ROLE_LABEL = { owner: 'Clan Leader', admin: 'Administrator', member: 'Clan Member' };
 const SECTIONS = [['general', 'General chat'], ['daily', 'Daily discussion'], ['events', 'Events chat'], ['planning', 'Planning chat'], ['shopping', 'Shopping chat']];
 // BGMI UID / Free Fire ID line. Tap an ID to copy it.
 const gameIds = (u, align = 'center') => (u.bgmiUid || u.ffUid) ? `<div class="small" style="margin-top:6px;text-align:${align}">${u.bgmiUid ? `<span data-copy="${esc(u.bgmiUid)}" style="cursor:pointer">🎮 BGMI <b>${esc(u.bgmiUid)}</b></span>` : ''}${u.bgmiUid && u.ffUid ? ' &nbsp;·&nbsp; ' : ''}${u.ffUid ? `<span data-copy="${esc(u.ffUid)}" style="cursor:pointer">🔥 FF <b>${esc(u.ffUid)}</b></span>` : ''}</div>` : '';
@@ -10,7 +9,7 @@ const link = (href, ic, label, sub = '') => `<a href="${href}" class="row" style
 KF.views.profile = async view => {
   const me = KF.state.me, f = KF.state.family, admin = me.role !== 'member';
   view.innerHTML = `<div class="gap fade">
-    <div class="card center">${avatar(me, '')}<h2 style="margin-top:8px">${esc(me.name)}</h2><div class="small muted">${esc(me.email)}</div>${gameIds(me)}<div style="margin-top:6px"><span class="pill gold">${ROLE_LABEL[me.role]}</span> <span class="pill">${esc(f.name)}</span></div>
+    <div class="card center">${avatar(me, '')}<h2 style="margin-top:8px">${esc(me.name)}</h2><div class="small muted">${esc(me.email)}</div>${gameIds(me)}<div style="margin-top:6px"><span class="pill gold">${rankOf(me).icon} ${rankOf(me).label}</span> <span class="pill">${esc(f.name)}</span></div>
       <div class="row" style="justify-content:center;margin-top:12px"><button class="btn small ghost" data-name>Edit profile</button><button class="btn small ghost" data-photo>Change photo</button></div></div>
     <div class="card list">
       ${link('#/shopping', 'cart', 'Shopping lists')}${link('#/expenses', 'money', 'Clan funds', 'Private')}${link('#/memories', 'photo', 'Memories & albums')}${link('#/polls', 'poll', 'Polls & voting')}${link('#/events', 'cal', 'Clan events')}${link('#/files', 'folder', 'File manager', 'Files stored in Google Drive')}</div>
@@ -28,8 +27,8 @@ KF.views.profile = async view => {
 /* ---------- MEMBERS ---------- */
 KF.views.members = async view => {
   const me = KF.state.me, owner = me.role === 'owner';
-  const ms = KF.state.members;
-  view.innerHTML = `<div class="gap fade"><div class="card"><div class="list">${ms.map(m => `<div class="row">${avatar(m)}<div class="grow"><b>${esc(m.name)}</b>${m.id === me.id ? ' <span class="small muted">(you)</span>' : ''}<div class="small muted">${ROLE_LABEL[m.role]} · joined ${fmtDate(m.joinedAt)}${KF.state.online.has(m.id) ? ' · 🟢 online' : ''}</div>${gameIds(m, 'left')}</div>
+  const ms = [...KF.state.members].sort((a, b) => rankOf(a).n - rankOf(b).n || a.joinedAt - b.joinedAt);
+  view.innerHTML = `<div class="gap fade"><div class="card"><div class="list">${ms.map(m => `<div class="row">${avatar(m)}<div class="grow"><b>${esc(m.name)}</b>${m.id === me.id ? ' <span class="small muted">(you)</span>' : ''}<div class="small muted"><span class="rank ${rankOf(m).cls}">${rankOf(m).icon} ${rankOf(m).label}</span> · joined ${fmtDate(m.joinedAt)}${KF.state.online.has(m.id) ? ' · 🟢 online' : ''}</div>${gameIds(m, 'left')}</div>
       ${m.id !== me.id ? `<button class="btn small ghost" data-dm="${m.id}">Chat</button>` : ''}
       ${(owner || (me.role === 'admin' && m.role === 'member')) && m.id !== me.id ? `<button class="icon-btn" data-man="${m.id}">${icon('more')}</button>` : ''}</div>`).join('')}</div></div>
     ${me.role !== 'member' ? '<a class="btn gold block" href="#/invitations" style="text-align:center;text-decoration:none">Invite someone</a>' : ''}
@@ -39,11 +38,11 @@ KF.views.members = async view => {
   $$('[data-man]', view).forEach(b => b.onclick = () => {
     const m = ms.find(x => x.id === b.dataset.man); const p = m.perms || {};
     sheet(`<h2>${esc(m.name)}</h2><div class="gap">
-      ${owner ? `<label>Role</label><select data-role><option value="member" ${m.role === 'member' ? 'selected' : ''}>Clan Member</option><option value="admin" ${m.role === 'admin' ? 'selected' : ''}>Administrator</option></select>` : ''}
+      <label>Rank</label><select data-tier><option value="member" ${rankOf(m).cls === 'plain' ? 'selected' : ''}>🎮 Member</option><option value="elite" ${m.role === 'member' && m.elite ? 'selected' : ''}>⭐ Elite</option>${owner ? `<option value="admin" ${m.role === 'admin' ? 'selected' : ''}>🛡️ Co-Leader</option>` : ''}</select>
       <label>Permissions</label>
       ${[['plans', 'Create plans'], ['events', 'Add events'], ['expenses', 'View & add expenses'], ['plans_manage', 'Manage any plan'], ['invite', 'Create invitations']].map(([k, l]) => `<label class="row" style="margin:0;color:inherit;font-size:1rem"><input type="checkbox" style="width:22px;height:22px" data-p="${k}" ${p[k] ? 'checked' : ''}>${l}</label>`).join('')}
       <button class="btn gold" data-save>Save</button><button class="btn danger" data-rm>Remove from clan</button></div>`, (s, close) => {
-      $('[data-save]', s).onclick = async () => { const perms = {}; $$('[data-p]', s).forEach(c => perms[c.dataset.p] = c.checked); try { await api('/members/' + m.id, { method: 'PATCH', body: { perms, role: owner ? $('[data-role]', s).value : undefined } }); close(); await KF.refreshFamily(); route(); } catch (e) { toast(e.message); } };
+      $('[data-save]', s).onclick = async () => { const perms = {}; $$('[data-p]', s).forEach(c => perms[c.dataset.p] = c.checked); try { await api('/members/' + m.id, { method: 'PATCH', body: { perms, tier: $('[data-tier]', s).value } }); close(); await KF.refreshFamily(); route(); } catch (e) { toast(e.message); } };
       $('[data-rm]', s).onclick = async () => { close(); if (await confirmSheet(`Remove ${m.name} from the clan?`, 'Remove', true)) try { await api('/members/' + m.id, { method: 'DELETE' }); await KF.refreshFamily(); route(); } catch (e) { toast(e.message); } };
     });
   });
@@ -55,11 +54,11 @@ KF.views.invitations = async view => {
   const inv = await api('/invites');
   const url = c => `${location.origin}/?invite=${encodeURIComponent(c)}`;
   view.innerHTML = `<div class="gap fade"><button class="btn gold block" data-new>Create invitation</button>
-    ${inv.length ? inv.map(i => `<div class="card"><div class="row"><h2 class="grow" style="letter-spacing:2px">${esc(i.code)}</h2><span class="pill">${i.role}</span></div><div class="small muted">Used ${i.uses}/${i.maxUses} · expires ${fmtDate(i.expiresAt)}</div>
+    ${inv.length ? inv.map(i => `<div class="card"><div class="row"><h2 class="grow" style="letter-spacing:2px">${esc(i.code)}</h2><span class="pill">${i.role === 'admin' ? 'Co-Leader' : 'Member'}</span></div><div class="small muted">Used ${i.uses}/${i.maxUses} · expires ${fmtDate(i.expiresAt)}</div>
       <div class="row wrap" style="margin-top:8px"><button class="btn small" data-share="${i.code}">Share link</button><button class="btn small ghost" data-copy="${i.code}">Copy code</button><button class="btn small danger" data-rev="${i.id}">Revoke</button></div></div>`).join('') : '<div class="empty"><div class="big">✉️</div>No active invitations.</div>'}
     <p class="small muted">Invitation links only work for people who then register or log in. You can revoke a code at any time.</p></div>`;
   $('[data-new]', view).onclick = async () => {
-    const v = await formSheet('New invitation', [{ name: 'role', label: 'Joins as', type: 'select', options: [{ value: 'member', label: 'Clan Member' }, ...(KF.state.me.role === 'owner' ? [{ value: 'admin', label: 'Administrator' }] : [])] }, { name: 'maxUses', label: 'Maximum uses', type: 'number', value: 1 }, { name: 'days', label: 'Valid for (days)', type: 'number', value: 7 }], 'Create');
+    const v = await formSheet('New invitation', [{ name: 'role', label: 'Joins as', type: 'select', options: [{ value: 'member', label: 'Member' }, ...(KF.state.me.role === 'owner' ? [{ value: 'admin', label: 'Co-Leader' }] : [])] }, { name: 'maxUses', label: 'Maximum uses', type: 'number', value: 1 }, { name: 'days', label: 'Valid for (days)', type: 'number', value: 7 }], 'Create');
     if (v) try { await api('/invites', { method: 'POST', body: { role: v.role, maxUses: +v.maxUses, days: +v.days } }); route(); } catch (e) { toast(e.message); }
   };
   $$('[data-share]', view).forEach(b => b.onclick = async () => { const t = `Join our clan on HINDU ESPORTS ✦ Together as One\n${url(b.dataset.share)}\nInvitation code: ${b.dataset.share}`; if (navigator.share) { try { await navigator.share({ title: 'HINDU ESPORTS invitation', text: t }); } catch (_) {} } else { navigator.clipboard?.writeText(t); toast('Invitation copied'); } });
@@ -100,7 +99,7 @@ KF.applyChatBg = applyChatBg;
 /* ---------- CLAN SETTINGS (leader/admin) ---------- */
 KF.views.family = async view => {
   const f = KF.state.family, owner = KF.state.me.role === 'owner';
-  if (KF.state.me.role === 'member') { view.innerHTML = '<div class="empty"><div class="big">🔒</div>Only the clan leader or administrators can change clan settings.</div>'; return; }
+  if (KF.state.me.role === 'member') { view.innerHTML = '<div class="empty"><div class="big">🔒</div>Only the Clan Leader or Co-Leaders can change clan settings.</div>'; return; }
   const secs = f.sections || SECTIONS.map(s => s[0]);
   view.innerHTML = `<div class="gap fade">
     <div class="card"><h3>Clan</h3><label>Clan name</label><input data-name value="${esc(f.name)}" maxlength="60"><label>Currency symbol</label><input data-cur value="${esc(f.currency || '₹')}" maxlength="3">

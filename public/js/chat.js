@@ -71,7 +71,7 @@ KF.views.room = async (view, params) => {
     const mine = m.userId === me.id, u = member(m.userId);
     let inner = '';
     if (m.deleted) return `<div class="msg deleted ${mine ? 'me' : ''}" data-id="${m.id}">Message deleted</div>`;
-    if (!mine && room.type !== 'dm') inner += `<div class="who">${esc(u?.name || 'Former member')}</div>`;
+    if (!mine && room.type !== 'dm') inner += `<div class="who">${esc(u?.name || 'Former member')}${u && rankOf(u).n < 3 ? ` <span class="rk ${rankOf(u).cls}" title="${rankOf(u).label}">${rankOf(u).icon}</span>` : ''}</div>`;
     if (m.replyTo) { const r = msgs.find(x => x.id === m.replyTo); inner += `<div class="reply">${r ? esc((member(r.userId)?.name.split(' ')[0] || '') + ': ' + (r.deleted ? 'deleted' : r.text || 'attachment')) : 'Original message'}</div>`; }
     if (m.file) {
       const f = m.file, url = `/api/files/${f.id}/content`;

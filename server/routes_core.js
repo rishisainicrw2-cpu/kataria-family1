@@ -15,7 +15,7 @@ const makeCode = () => { const b = crypto.randomBytes(8); let s = ''; for (let i
 const PERM_KEYS = ['plans', 'events', 'expenses', 'plans_manage', 'invite'];
 const DEFAULT_PERMS = { plans: true, events: true };
 
-const userDto = u => ({ id: u.id, name: u.name, email: u.email, hasPhoto: !!u.photoV, photoV: u.photoV, prefs: u.prefs, role: u.role, bgmiUid: u.bgmiUid || '', ffUid: u.ffUid || '' });
+const userDto = u => ({ id: u.id, name: u.name, email: u.email, hasPhoto: !!u.photoV, photoV: u.photoV, prefs: u.prefs, role: u.role, elite: !!u.elite, bgmiUid: u.bgmiUid || '', ffUid: u.ffUid || '' });
 
 /* =============== AUTH =============== */
 route('POST', '/api/auth/register', async ctx => {
@@ -203,7 +203,7 @@ route('POST', '/api/family/join', ctx => {
 route('GET', '/api/family', ctx => {
   const fid = L.needFamily(ctx.user);
   const f = q.get('SELECT * FROM families WHERE id=?', fid);
-  return { family: familyDto(f), members: L.members(fid), me: { role: ctx.user.role, perms: ctx.user.perms }, online: L.members(fid).map(m => m.id).filter(ws.isOnline) };
+  return { family: familyDto(f), members: L.members(fid), me: { role: ctx.user.role, elite: !!ctx.user.elite, perms: ctx.user.perms }, online: L.members(fid).map(m => m.id).filter(ws.isOnline) };
 });
 route('PATCH', '/api/family', ctx => {
   const fid = L.needAdmin(ctx.user) || ctx.user.familyId; const b = ctx.body; const f = q.get('SELECT * FROM families WHERE id=?', fid);
@@ -253,7 +253,7 @@ route('POST', '/api/family/transfer', async ctx => {
   if (!(await L.checkPassword(String(ctx.body.password || ''), u.pass_hash, u.pass_salt))) throw bad('Password is incorrect.');
   const target = q.get('SELECT * FROM memberships WHERE user_id=? AND family_id=?', ctx.body.userId, fid);
   if (!target || target.user_id === ctx.user.id) throw bad('Choose another clan member.');
-  tx(() => { q.run("UPDATE memberships SET role='admin' WHERE user_id=?", ctx.user.id); q.run("UPDATE memberships SET role='owner' WHERE user_id=?", target.user_id); q.run('UPDATE families SET owner_id=? WHERE id=?', target.user_id, fid); });
+  tx(() => { q.run("UPDATE memberships SET role='admin', elite=0 WHERE user_id=?", ctx.user.id); q.run("UPDATE memberships SET role='owner', elite=0 WHERE user_id=?", target.user_id); q.run('UPDATE families SET owner_id=? WHERE id=?', target.user_id, fid); });
   ws.broadcastFamily(fid, { type: 'family.changed' });
 });
 
@@ -263,11 +263,14 @@ route('PATCH', '/api/members/:id', ctx => {
   const t = q.get('SELECT * FROM memberships WHERE user_id=? AND family_id=?', ctx.params.id, fid);
   if (!t) throw notFound('Member not found');
   if (t.user_id === ctx.user.id || t.role === 'owner') throw forbidden('You cannot change this member.');
-  if (ctx.user.role === 'admin' && t.role !== 'member') throw forbidden('Administrators can only manage regular members.');
-  if (ctx.body.role !== undefined) {
-    L.needOwner(ctx.user);
-    if (!['member', 'admin'].includes(ctx.body.role)) throw bad('Invalid role');
-    q.run('UPDATE memberships SET role=? WHERE user_id=?', ctx.body.role, t.user_id);
+  if (ctx.user.role === 'admin' && t.role !== 'member') throw forbidden('Co-Leaders can only manage regular members.');
+  // rank: 'member' | 'elite' | 'admin' (Co-Leader). Old clients send it as "role". Only the Clan Leader can appoint a Co-Leader;
+  // a Co-Leader may make a regular member Elite (or back), because they can only touch regular members anyway.
+  const tier = ctx.body.tier !== undefined ? ctx.body.tier : ctx.body.role;
+  if (tier !== undefined) {
+    if (!['member', 'elite', 'admin'].includes(tier)) throw bad('Invalid rank');
+    if (tier === 'admin' || t.role === 'admin') L.needOwner(ctx.user);
+    q.run('UPDATE memberships SET role=?, elite=? WHERE user_id=? AND family_id=?', tier === 'admin' ? 'admin' : 'member', tier === 'elite' ? 1 : 0, t.user_id, fid);
   }
   if (ctx.body.perms && typeof ctx.body.perms === 'object') {
     const p = {}; for (const k of PERM_KEYS) if (ctx.body.perms[k] === true) p[k] = true;
@@ -280,7 +283,7 @@ route('DELETE', '/api/members/:id', ctx => {
   const t = q.get('SELECT * FROM memberships WHERE user_id=? AND family_id=?', ctx.params.id, fid);
   if (!t) throw notFound('Member not found');
   if (t.user_id === ctx.user.id || t.role === 'owner') throw forbidden('You cannot remove this member.');
-  if (ctx.user.role === 'admin' && t.role !== 'member') throw forbidden('Administrators can only remove regular members.');
+  if (ctx.user.role === 'admin' && t.role !== 'member') throw forbidden('Co-Leaders can only remove regular members.');
   removeFromFamily(t.user_id, fid);
   ws.sendTo(t.user_id, { type: 'family.changed' });
 });
@@ -292,7 +295,7 @@ route('GET', '/api/invites', ctx => {
 route('POST', '/api/invites', ctx => {
   const fid = L.needFamily(ctx.user); if (!L.can(ctx.user, 'invite')) throw forbidden('You cannot create invitations.');
   const role = ctx.body.role === 'admin' ? 'admin' : 'member';
-  if (role === 'admin' && ctx.user.role !== 'owner') throw forbidden('Only the owner can invite administrators.');
+  if (role === 'admin' && ctx.user.role !== 'owner') throw forbidden('Only the Clan Leader can invite Co-Leaders.');
   const maxUses = Math.min(Math.max(Math.round(L.num(ctx.body.maxUses, { name: 'Maximum uses', min: 1, max: 50 }) || 1), 1), 50);
   const days = Math.min(Math.max(L.num(ctx.body.days, { name: 'Days', min: 1, max: 60 }) || 7, 1), 60);
   const id = uid(); let code; do code = makeCode(); while (q.get('SELECT 1 FROM invites WHERE code=?', code));
@@ -474,7 +477,7 @@ route('GET', '/api/files/:id/thumb', async ctx => {
 });
 route('DELETE', '/api/files/:id', async ctx => {
   const f = fileFor(ctx);
-  if (f.uploaded_by !== ctx.user.id && !L.isAdmin(ctx.user)) throw forbidden('Only the uploader or an administrator can delete this file.');
+  if (f.uploaded_by !== ctx.user.id && !L.isAdmin(ctx.user)) throw forbidden('Only the uploader or a Co-Leader can delete this file.');
   await drive.remove(drive.ref(ctx.user.familyId, f.drive_acct), f.drive_id);
   tx(() => { q.run('UPDATE messages SET file_id=NULL WHERE file_id=?', f.id); q.run('DELETE FROM files WHERE id=?', f.id); });
   thumbCache.delete(f.id); L.bump(ctx.user.familyId, 'memories', ctx.user.id);

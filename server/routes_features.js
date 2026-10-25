@@ -53,7 +53,7 @@ route('GET', '/api/plans/:id', ctx => {
 });
 route('PATCH', '/api/plans/:id', ctx => {
   const p = L.owned('plans', ctx.params.id, ctx.user);
-  if (!canManagePlan(ctx.user, p)) throw forbidden('Only the plan creator or an administrator can edit this plan.');
+  if (!canManagePlan(ctx.user, p)) throw forbidden('Only the plan creator or a Co-Leader can edit this plan.');
   const b = ctx.body; const set = {};
   if (b.title !== undefined) set.title = L.str(b.title, { name: 'Title', required: true, max: 120 });
   if (b.description !== undefined) set.description = L.str(b.description, { max: 2000 });
@@ -73,7 +73,7 @@ route('PATCH', '/api/plans/:id', ctx => {
 });
 route('DELETE', '/api/plans/:id', async ctx => {
   const p = L.owned('plans', ctx.params.id, ctx.user);
-  if (!canManagePlan(ctx.user, p)) throw forbidden('Only the plan creator or an administrator can delete this plan.');
+  if (!canManagePlan(ctx.user, p)) throw forbidden('Only the plan creator or a Co-Leader can delete this plan.');
   q.run('UPDATE files SET plan_id=NULL WHERE plan_id=?', p.id);
   tx(() => { q.run('DELETE FROM rooms WHERE id=?', p.room_id); q.run('DELETE FROM plans WHERE id=?', p.id); });
   L.bump(p.family_id, 'plans', ctx.user.id);
@@ -137,7 +137,7 @@ route('POST', '/api/polls/:id/vote', ctx => {
 });
 route('POST', '/api/polls/:id/close', ctx => {
   const p = L.owned('polls', ctx.params.id, ctx.user);
-  if (p.created_by !== ctx.user.id && !L.isAdmin(ctx.user)) throw forbidden('Only the poll creator or an administrator can close it.');
+  if (p.created_by !== ctx.user.id && !L.isAdmin(ctx.user)) throw forbidden('Only the poll creator or a Co-Leader can close it.');
   q.run('UPDATE polls SET closed=1 WHERE id=?', p.id);
   const d = pollDto(p); const top = [...d.options].sort((a, b) => b.votes.length - a.votes.length)[0];
   L.notify(L.familyMemberIds(p.family_id), { title: `Poll result: ${p.question}`, body: top && top.votes.length ? `Winner: ${top.text} (${top.votes.length} votes)` : 'No votes were cast', url: p.plan_id ? '#/plan/' + p.plan_id : '#/polls', kind: 'poll' });
@@ -168,7 +168,7 @@ route('PATCH', '/api/events/:id', ctx => {
 });
 route('DELETE', '/api/events/:id', ctx => {
   const e = L.owned('events', ctx.params.id, ctx.user);
-  if (e.created_by !== ctx.user.id && !L.isAdmin(ctx.user)) throw forbidden('Only the creator or an administrator can delete this event.');
+  if (e.created_by !== ctx.user.id && !L.isAdmin(ctx.user)) throw forbidden('Only the creator or a Co-Leader can delete this event.');
   q.run('DELETE FROM events WHERE id=?', e.id);
   L.notify(L.familyMemberIds(e.family_id).filter(x => x !== ctx.user.id), { title: `Event cancelled: ${e.title}`, url: '#/events', kind: 'event' });
   L.bump(e.family_id, 'events', ctx.user.id);
