@@ -20,7 +20,7 @@ self.addEventListener('push', e => {
     let d = { title: 'HINDU ESPORTS', body: 'New activity in your clan', url: '/' };
     try { const r = await fetch('/api/notifications/latest', { credentials: 'same-origin' }); if (r.ok) d = await r.json(); } catch (_) {}
     await self.registration.showNotification(d.title || 'HINDU ESPORTS', {
-      body: d.body || '', icon: '/assets/icon-192.png', badge: '/assets/favicon-48.png', data: '/' + (d.url && d.url.startsWith('#') ? d.url : '')
+      body: d.body || '', icon: '/assets/icon-192.png', badge: '/assets/favicon-48.png', tag: d.url || 'clan', renotify: true, vibrate: [120, 60, 120], data: '/' + (d.url && d.url.startsWith('#') ? d.url : '')
     });
   })());
 });

@@ -77,7 +77,13 @@ KF.on('notification', ev => {
 });
 KF.on('family.changed', async () => { await refreshFamily().catch(() => {}); });
 KF.on('data.changed', ev => { if (ev.scope && location.hash.startsWith('#/' + ev.scope)) route(); });
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && KF.state.me) KF.connectWS(); });
+// While the app is in the background the live connection is closed, so the server knows to send a phone notification instead.
+let wsSleep = 0;
+document.addEventListener('visibilitychange', () => {
+  clearTimeout(wsSleep);
+  if (document.visibilityState === 'visible') { KF.wsPaused = false; if (KF.state.me) KF.connectWS(); }
+  else wsSleep = setTimeout(() => { KF.wsPaused = true; try { KF.ws && KF.ws.close(); } catch (_) {} }, 15000);
+});
 
 /* Web Push (optional): only if the server has VAPID keys configured */
 async function setupPush() {
@@ -87,8 +93,11 @@ async function setupPush() {
     const reg = await navigator.serviceWorker.ready;
     if (Notification.permission === 'default') return; // asked from Settings, never automatically
     if (Notification.permission !== 'granted') return;
+    const key = Uint8Array.from(atob(cfg.publicKey.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
     let sub = await reg.pushManager.getSubscription();
-    if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: Uint8Array.from(atob(cfg.publicKey.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0)) });
+    // a subscription made with different server keys can never receive anything: replace it
+    if (sub && sub.options && sub.options.applicationServerKey && Array.from(new Uint8Array(sub.options.applicationServerKey)).join() !== Array.from(key).join()) { await sub.unsubscribe(); sub = null; }
+    if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
     await api('/push/subscribe', { method: 'POST', body: sub.toJSON() });
   } catch (_) {}
 }

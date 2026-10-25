@@ -104,7 +104,7 @@ function notify(userIds, { title, body = '', url = '#/home', kind }) {
     if (!wants(id, kind)) continue;
     const r = q.run('INSERT INTO notifications(user_id,title,body,url,kind,created_at) VALUES(?,?,?,?,?,?)', id, title, body, url, kind, now());
     ws.sendTo(id, { type: 'notification', id: Number(r.lastInsertRowid), title, body, url });
-    if (!ws.isOnline(id)) push.tickle(id);
+    if (!ws.isOnline(id)) push.tickle(id, { title, body, url });
   }
 }
 const bump = (fid, scope, except) => ws.broadcastFamily(fid, { type: 'data.changed', scope }, except);

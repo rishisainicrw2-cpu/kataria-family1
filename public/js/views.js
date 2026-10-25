@@ -89,11 +89,13 @@ KF.views.home = async (view) => {
   const hr = new Date().getHours(), greet = hr < 12 ? 'Good morning' : hr < 18 ? 'Good afternoon' : 'Good evening';
   const quick = [['chat', 'Start a Chat', '#/chats'], ['plans', 'Match Plan', 'plan:new'], ['cal', 'Add Event', 'event:new'],
     ['photo', 'Upload Photo', 'photo:new'], ['cart', 'Gear List', '#/shopping'], ['money', 'Add Expense', 'expense:new']];
+  const pushOffer = 'Notification' in window && 'serviceWorker' in navigator && Notification.permission === 'default' ? `<div class="card row" style="gap:12px"><div class="grow"><b>Get phone alerts</b><div class="small muted">Know when your clan messages you, even when the app is closed.</div></div><button class="btn small gold" data-pushon>Turn on</button></div>` : '';
   view.innerHTML = `<div class="gap fade">
     <div class="card" style="background:linear-gradient(135deg,var(--blue),var(--blue-d) 60%,var(--ink));color:#fff;border:0">
       <div class="row"><img src="/assets/icon-192.png" width="56" height="56" style="border-radius:14px" alt="">
         <div class="grow"><div style="opacity:.8;font-size:.85rem">${greet}, ${esc(me.name.split(' ')[0])} ✦</div>
         <h2 style="color:#fff">${esc(f.name)}</h2><div class="small" style="color:var(--gold-l)">Together as One ✦</div></div></div></div>
+    ${pushOffer}
     ${d.announcements.length ? `<div class="card" style="border-color:var(--gold)"><h3>📢 Announcements</h3>${d.announcements.map(a => `<div class="small" style="padding:4px 0"><b>${esc(a.title)}</b><div class="muted">${esc(a.body)}</div></div>`).join('')}</div>` : ''}
     <div class="grid2" style="grid-template-columns:repeat(3,1fr)">${quick.map(q => `<button class="quick" data-q="${q[2]}"><span class="q">${icon(q[0])}</span>${q[1]}</button>`).join('')}</div>
     <div class="card"><h3>Online now</h3>${d.online.length ? `<div class="row wrap">${d.online.map(u => `<div class="center small" style="width:62px">${avatar(u)}<div class="small" style="margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(u.name.split(' ')[0])}</div></div>`).join('')}</div>` : '<div class="muted small">No one else is online right now.</div>'}</div>
@@ -103,6 +105,7 @@ KF.views.home = async (view) => {
     <div class="card"><div class="row"><h3 class="grow" style="margin:0">Recent highlights</h3><a href="#/memories" class="small">See all</a></div>
       ${d.photos.length ? `<div class="gallery" style="margin-top:10px">${d.photos.map(p => `<div class="ph" onclick="location.hash='#/memories'"><img loading="lazy" src="/api/files/${p.id}/thumb" alt="${esc(p.name)}"></div>`).join('')}</div>` : '<div class="empty"><div class="big">📷</div>Upload your first clan highlight.</div>'}</div>
   </div>`;
+  const pb = $('[data-pushon]', view); if (pb) pb.onclick = async () => { try { const r = await Notification.requestPermission(); if (r === 'granted') { await KF.setupPush(); toast('Phone alerts are on 🔔'); } else toast('Alerts not allowed. You can change this in your phone settings.', 5000); } catch (e) { toast('This phone or browser cannot show alerts here.'); } route(); };
   $$('[data-q]', view).forEach(b => b.onclick = () => {
     const q = b.dataset.q;
     if (q.startsWith('#')) location.hash = q;

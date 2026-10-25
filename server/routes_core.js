@@ -366,7 +366,7 @@ route('POST', '/api/rooms/:id/messages', ctx => {
   L.notify([...mentioned].filter(x => !muted(x)), { title: `${ctx.user.name} in ${rname}`, body: text.slice(0, 120), url, kind: 'mention' });
   for (const a of audience) if (!mentioned.has(a) && !ws.isOnline(a) && !muted(a)) {
     const kind = r.type === 'dm' ? 'private' : 'message';
-    const p = json(q.get('SELECT prefs FROM users WHERE id=?', a)?.prefs); if (p[kind === 'private' ? 'n_private' : 'n_messages'] !== false) push.tickle(a);
+    const p = json(q.get('SELECT prefs FROM users WHERE id=?', a)?.prefs); if (p[kind === 'private' ? 'n_private' : 'n_messages'] !== false) push.tickle(a, { title: r.type === 'dm' ? ctx.user.name : `${ctx.user.name} in ${rname}`, body: text || (fileId ? '📎 Sent a file' : 'New message'), url });
   }
   return msg;
 });
@@ -525,7 +525,7 @@ route('POST', '/api/drive/restore-key', async ctx => {
 /* =============== PUSH =============== */
 route('GET', '/api/push/config', () => ({ publicKey: push.publicKey }));
 route('POST', '/api/push/subscribe', ctx => {
-  const ep = String(ctx.body.endpoint || ''); if (!/^https:\/\//.test(ep)) throw bad('Invalid subscription');
+  const ep = String(ctx.body.endpoint || ''); if (!/^https:\/\//.test(ep) && !(process.env.PUSH_TEST === '1' && /^http:\/\/127\.0\.0\.1[:/]/.test(ep))) throw bad('Invalid subscription');
   q.run('INSERT INTO push_subs(endpoint,user_id,sub) VALUES(?,?,?) ON CONFLICT(endpoint) DO UPDATE SET user_id=excluded.user_id,sub=excluded.sub', ep, ctx.user.id, JSON.stringify(ctx.body));
 });
 
@@ -564,5 +564,5 @@ route('GET', '/api/dashboard', ctx => {
 });
 route('GET', '/api/notifications/unread-count', ctx => ({ count: q.get('SELECT COUNT(*) c FROM notifications WHERE user_id=? AND read=0', ctx.user.id).c }));
 route('GET', '/api/notifications', ctx => q.all('SELECT * FROM notifications WHERE user_id=? ORDER BY id DESC LIMIT 60', ctx.user.id).map(n => ({ id: n.id, title: n.title, body: n.body, url: n.url, read: !!n.read, createdAt: n.created_at })));
-route('GET', '/api/notifications/latest', ctx => { const n = q.get('SELECT title,body,url FROM notifications WHERE user_id=? AND read=0 ORDER BY id DESC LIMIT 1', ctx.user.id); return n || { title: 'HINDU ESPORTS', body: 'New activity in your clan', url: '/' }; });
+route('GET', '/api/notifications/latest', ctx => { const live = push.takePending(ctx.user.id); if (live && Date.now() - live.at < 10 * 60 * 1000) return { title: live.title, body: live.body, url: live.url }; const n = q.get('SELECT title,body,url FROM notifications WHERE user_id=? AND read=0 ORDER BY id DESC LIMIT 1', ctx.user.id); return n || { title: 'HINDU ESPORTS', body: 'New activity in your clan', url: '/' }; });
 route('POST', '/api/notifications/read', ctx => { q.run('UPDATE notifications SET read=1 WHERE user_id=?', ctx.user.id); });

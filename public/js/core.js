@@ -148,7 +148,7 @@ function connectWS() {
   ws.onopen = () => { KF.wsRetry = 0; $('#offline') && $('#offline').classList.add('hidden'); (KF.handlers.open || []).forEach(f => f()); };
   ws.onmessage = e => { let m; try { m = JSON.parse(e.data); } catch (_) { return; } (KF.handlers[m.type] || []).forEach(f => f(m)); };
   ws.onclose = () => {
-    if (!KF.state.me) return;
+    if (!KF.state.me || KF.wsPaused) return;
     $('#offline') && $('#offline').classList.remove('hidden');
     KF.wsRetry = Math.min((KF.wsRetry || 0) + 1, 6);
     setTimeout(connectWS, 800 * KF.wsRetry);
