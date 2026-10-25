@@ -112,7 +112,13 @@ function formSheet(title, fields, submitLabel = 'Save') {
 const fmtTime = t => new Date(t).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 const fmtDate = t => new Date(t).toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' });
 const fmtDT = t => `${new Date(t).toLocaleDateString([], { day: 'numeric', month: 'short' })}, ${fmtTime(t)}`;
-const fmtSize = n => n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB';
+const fmtSize = n => {
+  n = Number(n) || 0;
+  if (n >= 1099511627776) return (n / 1099511627776).toFixed(n >= 10995116277760 ? 0 : 2).replace(/\.?0+$/, '') + ' TB';
+  if (n >= 1073741824) return (n / 1073741824).toFixed(n >= 10737418240 ? 0 : 1).replace(/\.0$/, '') + ' GB';
+  if (n > 1048576) return (n / 1048576).toFixed(1) + ' MB';
+  return Math.max(1, Math.round(n / 1024)) + ' KB';
+};
 const money = n => (KF.state.family?.currency || '₹') + Number(n || 0).toLocaleString(undefined, { maximumFractionDigits: 2 });
 const initials = n => (n || '?').trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase();
 const member = id => KF.state.members.find(m => m.id === id);
