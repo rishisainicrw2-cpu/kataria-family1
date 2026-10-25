@@ -284,3 +284,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--gold);box-shadow:0 0 
 .msg.tagged{border-left:3px solid var(--gold);box-shadow:var(--spec),0 0 16px rgba(255,178,30,.28)}
 
 .btn.install{background:linear-gradient(135deg,#ff8a35,var(--blue-d));color:#fff;box-shadow:var(--spec),0 6px 22px rgba(242,106,15,.55)}
+
+.btn.install.big{padding:16px 18px;font-size:1.05rem;border-radius:20px;animation:pulse 2.4s ease-in-out infinite}
+@keyframes pulse{50%{box-shadow:var(--spec),0 6px 30px rgba(255,138,53,.9)}}
+@media (prefers-reduced-motion:reduce){.btn.install.big{animation:none}}

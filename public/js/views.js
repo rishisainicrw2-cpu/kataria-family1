@@ -9,17 +9,20 @@ KF.showAuth = (mode = 'welcome', note = '') => {
   const inviteCode = params.get('invite') || sessionStorage.getItem('kf_invite') || '';
   if (params.get('invite')) sessionStorage.setItem('kf_invite', inviteCode);
   if (mode === 'welcome') {
+    const installBtn = KF.isInstalled() ? '' : `<button class="btn install block big" data-install>📲 Install app</button><div class="small center" style="margin:-4px 0 2px;color:#ffd9bf;opacity:.85">Install first: opens like a real app and gives phone alerts</div>`;
     el.innerHTML = `${brand}<div class="panel gap">
+      ${installBtn}
+      ${inviteCode ? `<div class="card" style="text-align:center;padding:12px;background:rgba(255,178,30,.14);border-color:rgba(255,178,30,.5)"><div style="font-size:1.4rem">🎉</div><b>You are invited to the clan!</b><div class="small" style="margin-top:2px">Code <b style="letter-spacing:.12em">${esc(inviteCode)}</b> is saved. Create an account or log in to join.</div></div>` : ''}
       <p class="center" style="margin:0;color:#ffd9bf">A private space for your clan to chat, plan matches and share highlights.</p>
-      ${KF.isInstalled() ? '' : '<button class="btn install block" data-install>📲 Install app</button>'}
       <button class="btn gold block" data-m="register">Create account</button>
-      <button class="btn ghost block" style="color:#fff;border-color:rgba(255,255,255,.3)" data-m="login">I already have an account</button>
-      ${inviteCode ? `<p class="small center" style="color:var(--gold-l);margin:0">You were invited with code <b>${esc(inviteCode)}</b>. Register or log in to join.</p>` : ''}</div>`;
+      <button class="btn ghost block" style="color:#fff;border-color:rgba(255,255,255,.3)" data-m="login">I already have an account</button></div>`;
     $$('[data-m]', el).forEach(b => b.onclick = () => KF.showAuth(b.dataset.m));
     const ib = $('[data-install]', el); if (ib) ib.onclick = () => KF.installApp();
   } else if (mode === 'login' || mode === 'register') {
     const reg = mode === 'register';
+    const inst = inviteCode && !KF.isInstalled() ? '<button type="button" class="btn install block" data-install style="margin-bottom:6px">📲 Install app first</button>' : '';
     el.innerHTML = `${brand}<form class="panel" novalidate>
+      ${inst}
       ${reg ? '<label>Your name</label><input name="name" autocomplete="name" required maxlength="60">' : ''}
       ${reg ? '<label>BGMI UID <span style="opacity:.7">(optional)</span></label><input name="bgmiUid" inputmode="numeric" autocomplete="off" maxlength="20" placeholder="e.g. 5123456789"><label>Free Fire ID <span style="opacity:.7">(optional)</span></label><input name="ffUid" inputmode="numeric" autocomplete="off" maxlength="20" placeholder="e.g. 1234567890">' : ''}
       <label>Email</label><input name="email" type="email" autocomplete="email" required>
@@ -31,9 +34,10 @@ KF.showAuth = (mode = 'welcome', note = '') => {
         · <a href="#" data-m="welcome">Back</a></p></form>`;
     $$('[data-m]', el).forEach(b => b.onclick = e => { e.preventDefault(); KF.showAuth(b.dataset.m); });
     const form = $('form', el);
+    const ib2 = $('[data-install]', el); if (ib2) ib2.onclick = () => KF.installApp();
     form.onsubmit = async e => {
       e.preventDefault();
-      const btn = $('button.btn', form), err = $('.err', form);
+      const btn = $('button.btn:not(.install)', form), err = $('.err', form);
       const body = Object.fromEntries(new FormData(form));
       if (!body.email || !body.password || (reg && !body.name)) { err.textContent = 'Please fill in every field.'; return; }
       if (reg && body.password.length < 8) { err.textContent = 'Password must be at least 8 characters.'; return; }
