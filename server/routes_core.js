@@ -15,7 +15,7 @@ const makeCode = () => { const b = crypto.randomBytes(8); let s = ''; for (let i
 const PERM_KEYS = ['plans', 'events', 'expenses', 'plans_manage', 'invite'];
 const DEFAULT_PERMS = { plans: true, events: true };
 
-const userDto = u => ({ id: u.id, name: u.name, email: u.email, hasPhoto: !!u.photoV, photoV: u.photoV, prefs: u.prefs, role: u.role });
+const userDto = u => ({ id: u.id, name: u.name, email: u.email, hasPhoto: !!u.photoV, photoV: u.photoV, prefs: u.prefs, role: u.role, bgmiUid: u.bgmiUid || '', ffUid: u.ffUid || '' });
 
 /* =============== AUTH =============== */
 route('POST', '/api/auth/register', async ctx => {
@@ -25,10 +25,11 @@ route('POST', '/api/auth/register', async ctx => {
   if (!L.emailOk(email)) throw bad('Please enter a valid email address.');
   if (password.length < 8) throw bad('Password must be at least 8 characters.');
   if (password.length > 200) throw bad('Password is too long.');
+  const bgmiUid = L.gameId(ctx.body.bgmiUid, 'BGMI UID'), ffUid = L.gameId(ctx.body.ffUid, 'Free Fire ID');
   if (q.get('SELECT 1 FROM users WHERE email=?', email)) throw bad('An account with this email already exists. Try logging in.');
   const { hash, salt } = await L.hashPassword(password);
   const id = uid();
-  q.run('INSERT INTO users(id,email,name,pass_hash,pass_salt,created_at) VALUES(?,?,?,?,?,?)', id, email, name, hash, salt, now());
+  q.run('INSERT INTO users(id,email,name,pass_hash,pass_salt,bgmi_uid,ff_uid,created_at) VALUES(?,?,?,?,?,?,?,?)', id, email, name, hash, salt, bgmiUid, ffUid, now());
   L.createSession(ctx.res, ctx.req, id);
   return { ok: true };
 }, { auth: false, limit: { bucket: 'reg', max: 10 } });
@@ -84,10 +85,13 @@ route('POST', '/api/auth/reset', async ctx => {
 /* =============== ME =============== */
 route('GET', '/api/me', ctx => ({ user: userDto(ctx.user), family: !!ctx.user.familyId }));
 route('PATCH', '/api/me', ctx => {
-  const name = L.str(ctx.body.name, { name: 'Name', required: true, max: 60 });
-  q.run('UPDATE users SET name=? WHERE id=?', name, ctx.user.id);
+  const b = ctx.body;
+  const name = b.name !== undefined ? L.str(b.name, { name: 'Name', required: true, max: 60 }) : ctx.user.name;
+  const bgmiUid = b.bgmiUid !== undefined ? L.gameId(b.bgmiUid, 'BGMI UID') : ctx.user.bgmiUid;
+  const ffUid = b.ffUid !== undefined ? L.gameId(b.ffUid, 'Free Fire ID') : ctx.user.ffUid;
+  q.run('UPDATE users SET name=?, bgmi_uid=?, ff_uid=? WHERE id=?', name, bgmiUid, ffUid, ctx.user.id);
   if (ctx.user.familyId) ws.broadcastFamily(ctx.user.familyId, { type: 'family.changed' });
-  return userDto({ ...ctx.user, name });
+  return userDto({ ...ctx.user, name, bgmiUid, ffUid });
 });
 const PREF_BOOL = ['n_messages', 'n_private', 'n_mentions', 'n_plans', 'n_events', 'n_reminders', 'n_polls', 'n_tasks', 'n_announce'];
 route('PATCH', '/api/me/prefs', ctx => {
@@ -128,7 +132,7 @@ route('GET', '/api/me/export', ctx => {
   const u = ctx.user, fid = u.familyId;
   const rooms = fid ? q.all('SELECT * FROM rooms WHERE family_id=?', fid).filter(r => L.canAccessRoom(u, r.id)) : [];
   return {
-    exportedAt: new Date().toISOString(), profile: { id: u.id, name: u.name, email: u.email, role: u.role, prefs: u.prefs },
+    exportedAt: new Date().toISOString(), profile: { id: u.id, name: u.name, email: u.email, role: u.role, prefs: u.prefs, bgmiUid: u.bgmiUid, ffUid: u.ffUid },
     messages: rooms.flatMap(r => q.all('SELECT id,text,created_at,room_id FROM messages WHERE room_id=? AND user_id=? AND deleted=0', r.id, u.id).map(m => ({ ...m, room: r.name }))),
     plansCreated: q.all('SELECT title,description,starts_at,status FROM plans WHERE created_by=?', u.id),
     expensesPaidOrShared: fid ? q.all('SELECT e.title,e.amount,e.date FROM expenses e WHERE e.family_id=? AND (e.paid_by=? OR EXISTS(SELECT 1 FROM expense_splits s WHERE s.expense_id=e.id AND s.user_id=?))', fid, u.id, u.id) : [],

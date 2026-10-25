@@ -19,13 +19,19 @@ function createSession(res, req, userId) {
   q.run('INSERT INTO sessions(id,user_id,created_at,expires_at) VALUES(?,?,?,?)', sha(token), userId, t, t + cfg.SESSION_DAYS * 86400000);
   setCookie(res, req, 'kf_session', token, cfg.SESSION_DAYS * 86400);
 }
+// Optional game ID (BGMI UID / Free Fire ID): spaces and dashes are ignored; it must then be 5-15 digits. Empty is fine.
+function gameId(v, label) {
+  const s = String(v ?? '').replace(/[\s-]/g, ''); if (!s) return '';
+  if (!/^\d{5,15}$/.test(s)) throw new HttpError(400, `${label} must be numbers only (5 to 15 digits).`);
+  return s;
+}
 function authenticate(req) {
   const token = parseCookies(req).kf_session; if (!token) return null;
   const s = q.get('SELECT * FROM sessions WHERE id=?', sha(token));
   if (!s || s.expires_at < now()) { if (s) q.run('DELETE FROM sessions WHERE id=?', s.id); return null; }
   const u = q.get(`SELECT u.*, m.family_id, m.role, m.perms FROM users u LEFT JOIN memberships m ON m.user_id=u.id WHERE u.id=?`, s.user_id);
   if (!u) return null;
-  return { id: u.id, email: u.email, name: u.name, familyId: u.family_id || null, role: u.role || null, perms: json(u.perms), prefs: json(u.prefs), sessionId: s.id, photoV: u.photo_v, hasPhoto: !!u.photo_v };
+  return { id: u.id, email: u.email, name: u.name, familyId: u.family_id || null, role: u.role || null, perms: json(u.perms), prefs: json(u.prefs), sessionId: s.id, photoV: u.photo_v, hasPhoto: !!u.photo_v, bgmiUid: u.bgmi_uid || '', ffUid: u.ff_uid || '' };
 }
 
 /* ---------- permissions ---------- */
@@ -61,9 +67,9 @@ const emailOk = e => /^[^\s@]{1,64}@[^\s@]{1,255}\.[^\s@]{2,}$/.test(e);
 /* ---------- family helpers ---------- */
 const familyMemberIds = fid => q.all('SELECT user_id FROM memberships WHERE family_id=?', fid).map(r => r.user_id);
 const sameFamily = (u, otherId) => !!q.get('SELECT 1 FROM memberships WHERE user_id=? AND family_id=?', otherId, u.familyId);
-function memberDto(r) { return { id: r.id, name: r.name, email: undefined, role: r.role, perms: json(r.perms), joinedAt: r.joined_at, hasPhoto: !!r.photo_v, photoV: r.photo_v }; }
+function memberDto(r) { return { id: r.id, name: r.name, email: undefined, role: r.role, perms: json(r.perms), joinedAt: r.joined_at, hasPhoto: !!r.photo_v, photoV: r.photo_v, bgmiUid: r.bgmi_uid || '', ffUid: r.ff_uid || '' }; }
 function members(fid) {
-  return q.all('SELECT u.id,u.name,u.photo_v,m.role,m.perms,m.joined_at FROM memberships m JOIN users u ON u.id=m.user_id WHERE m.family_id=? ORDER BY m.joined_at', fid).map(memberDto);
+  return q.all('SELECT u.id,u.name,u.photo_v,u.bgmi_uid,u.ff_uid,m.role,m.perms,m.joined_at FROM memberships m JOIN users u ON u.id=m.user_id WHERE m.family_id=? ORDER BY m.joined_at', fid).map(memberDto);
 }
 const SECTION_TYPES = ['general', 'daily', 'events', 'planning', 'shopping'];
 const SECTION_NAMES = { general: 'General Clan Chat', daily: 'Daily Discussion', events: 'Clan Events', planning: 'Match Planning', shopping: 'Gear Chat' };
@@ -127,4 +133,4 @@ function messageDtos(rows, roomId) {
 function loadMessage(id) { const r = q.get('SELECT * FROM messages WHERE id=?', id); return r ? messageDtos([r], r.room_id)[0] : null; }
 function emitMessage(type, roomId, msg) { const r = q.get('SELECT * FROM rooms WHERE id=?', roomId); ws.sendToMany(roomAudience(r), { type, message: msg }); }
 
-module.exports = { hashPassword, checkPassword, sha, createSession, authenticate, isAdmin, can, needFamily, needPerm, needAdmin, needOwner, owned, str, num, ts, emailOk, familyMemberIds, sameFamily, members, ensureFamilyRooms, SECTION_TYPES, roomFor, roomAudience, canAccessRoom, notify, bump, fileDto, messageDtos, loadMessage, emitMessage, memberDto };
+module.exports = { hashPassword, checkPassword, sha, createSession, authenticate, isAdmin, can, needFamily, needPerm, needAdmin, needOwner, owned, str, num, ts, emailOk, gameId, familyMemberIds, sameFamily, members, ensureFamilyRooms, SECTION_TYPES, roomFor, roomAudience, canAccessRoom, notify, bump, fileDto, messageDtos, loadMessage, emitMessage, memberDto };

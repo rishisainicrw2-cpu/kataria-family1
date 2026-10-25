@@ -145,6 +145,8 @@ CREATE INDEX IF NOT EXISTS ix_drive_extra_family ON drive_extra(family_id);
 
 // Migration: which pooled account holds each file (NULL = the main account). Runs after a restore too, so older backups upgrade cleanly.
 if (!db.prepare('PRAGMA table_info(files)').all().some(c => c.name === 'drive_acct')) db.exec('ALTER TABLE files ADD COLUMN drive_acct TEXT');
+// Game IDs shown on a player's profile (BGMI UID, Free Fire ID). Optional text, digits only (checked in the API).
+for (const col of ['bgmi_uid', 'ff_uid']) if (!db.prepare('PRAGMA table_info(users)').all().some(c => c.name === col)) db.exec(`ALTER TABLE users ADD COLUMN ${col} TEXT`);
 
 const stats = { writes: 0 };   // bumped on every write; the Drive backup job uses it to know when something changed
 const cache = new Map();

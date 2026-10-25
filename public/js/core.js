@@ -59,9 +59,9 @@ KF.api = api;
 
 /* toast */
 let toastT;
-function toast(msg) {
+function toast(msg, ms = 2800) {
   let t = $('#toast'); if (!t) { t = h('<div id="toast"></div>'); document.body.appendChild(t); }
-  t.textContent = msg; t.classList.remove('hidden'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.add('hidden'), 2800);
+  t.textContent = msg; t.classList.remove('hidden'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.add('hidden'), ms);
 }
 
 /* bottom sheet */
@@ -164,8 +164,25 @@ async function uploadFile(file, category, extra = {}) {
 }
 function pickFile(accept, multiple = false) {
   return new Promise(res => {
+    // The input is kept inside the page while the picker is open: a loose input can be thrown away by phone browsers before the choice arrives.
     const i = document.createElement('input'); i.type = 'file'; i.accept = accept || '*/*'; i.multiple = multiple;
-    i.onchange = () => res([...i.files]); i.click();
+    i.style.cssText = 'position:fixed;left:-9999px;top:0;opacity:0'; document.body.appendChild(i);
+    const done = files => { i.remove(); res(files); };
+    i.onchange = () => done([...i.files]); i.addEventListener('cancel', () => done([])); i.click();
   });
 }
-Object.assign(window, { $, $$, esc, h, icon, toast, sheet, confirmSheet, formSheet, fmtTime, fmtDate, fmtDT, fmtSize, money, initials, member, avatar, localISO, uploadFile, pickFile, api });
+// Shrink a picture on the phone before it is uploaded (a normal camera photo is several MB; a profile picture needs ~100 KB).
+async function shrinkImage(file, max = 512, quality = 0.85) {
+  if (!file.type.startsWith('image/')) throw new Error('Please choose a picture.');
+  let bmp;
+  try { bmp = await createImageBitmap(file, { imageOrientation: 'from-image' }); }
+  catch (_) { throw new Error('This picture format is not supported. Please choose a JPG or PNG picture.'); }
+  const s = Math.min(1, max / Math.max(bmp.width, bmp.height));
+  const w = Math.max(1, Math.round(bmp.width * s)), hgt = Math.max(1, Math.round(bmp.height * s));
+  const c = document.createElement('canvas'); c.width = w; c.height = hgt;
+  const g = c.getContext('2d'); g.fillStyle = '#000'; g.fillRect(0, 0, w, hgt); g.drawImage(bmp, 0, 0, w, hgt); if (bmp.close) bmp.close();
+  const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', quality));
+  if (!blob) throw new Error('Could not prepare the picture. Please try another one.');
+  return new File([blob], 'profile.jpg', { type: 'image/jpeg' });
+}
+Object.assign(window, { $, $$, esc, h, icon, toast, shrinkImage, sheet, confirmSheet, formSheet, fmtTime, fmtDate, fmtDT, fmtSize, money, initials, member, avatar, localISO, uploadFile, pickFile, api });

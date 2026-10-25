@@ -19,6 +19,7 @@ KF.showAuth = (mode = 'welcome', note = '') => {
     const reg = mode === 'register';
     el.innerHTML = `${brand}<form class="panel" novalidate>
       ${reg ? '<label>Your name</label><input name="name" autocomplete="name" required maxlength="60">' : ''}
+      ${reg ? '<label>BGMI UID <span style="opacity:.7">(optional)</span></label><input name="bgmiUid" inputmode="numeric" autocomplete="off" maxlength="20" placeholder="e.g. 5123456789"><label>Free Fire ID <span style="opacity:.7">(optional)</span></label><input name="ffUid" inputmode="numeric" autocomplete="off" maxlength="20" placeholder="e.g. 1234567890">' : ''}
       <label>Email</label><input name="email" type="email" autocomplete="email" required>
       <label>Password ${reg ? '(min 8 characters)' : ''}</label><input name="password" type="password" autocomplete="${reg ? 'new-password' : 'current-password'}" required minlength="8">
       <div class="err" role="alert">${esc(note)}</div>

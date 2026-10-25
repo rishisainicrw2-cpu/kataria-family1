@@ -284,6 +284,20 @@ async function register(name, email) {
   check('owner deletes family and data', (await asha.req('DELETE', '/api/family', { password: PW })).status === 200);
   check('family data gone', (await asha.get('/api/family')).status !== 200);
 
+  section('Game IDs (BGMI / Free Fire)');
+  const gc = new Client();
+  check('bad BGMI UID rejected', (await gc.post('/api/auth/register', { name: 'Gamer', email: 'gamer@example.com', password: PW, bgmiUid: '12ab' })).status === 400);
+  check('bad FF ID rejected', (await gc.post('/api/auth/register', { name: 'Gamer', email: 'gamer@example.com', password: PW, ffUid: '123' })).status === 400);
+  const gr = await gc.post('/api/auth/register', { name: 'Gamer', email: 'gamer@example.com', password: PW, bgmiUid: '5123 456-789', ffUid: '1234567890' });
+  check('register with game IDs works', gr.status === 200 || gr.status === 201, gr.status);
+  const gme = await gc.get('/api/me');
+  check('IDs saved without spaces', gme.data && gme.data.user && gme.data.user.bgmiUid === '5123456789' && gme.data.user.ffUid === '1234567890', JSON.stringify(gme.data));
+  const gp = await gc.req('PATCH', '/api/me', { name: 'Gamer', bgmiUid: '999888777', ffUid: '' });
+  check('profile edit updates IDs', gp.status === 200, gp.status);
+  const gme2 = await gc.get('/api/me');
+  check('edited IDs stored', gme2.data.user.bgmiUid === '999888777' && gme2.data.user.ffUid === '', JSON.stringify(gme2.data));
+  check('bad ID in edit rejected', (await gc.req('PATCH', '/api/me', { name: 'Gamer', bgmiUid: 'abc' })).status === 400);
+
   await stopServer();
   fs.rmSync(DATA, { recursive: true, force: true });
   console.log(`\n${passed} passed, ${failed} failed`);

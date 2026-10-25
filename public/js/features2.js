@@ -1,14 +1,17 @@
 /* Members, invitations, notifications, profile, settings, clan settings, Drive, files, search, privacy, help */
 const ROLE_LABEL = { owner: 'Clan Leader', admin: 'Administrator', member: 'Clan Member' };
 const SECTIONS = [['general', 'General chat'], ['daily', 'Daily discussion'], ['events', 'Events chat'], ['planning', 'Planning chat'], ['shopping', 'Shopping chat']];
+// BGMI UID / Free Fire ID line. Tap an ID to copy it.
+const gameIds = (u, align = 'center') => (u.bgmiUid || u.ffUid) ? `<div class="small" style="margin-top:6px;text-align:${align}">${u.bgmiUid ? `<span data-copy="${esc(u.bgmiUid)}" style="cursor:pointer">🎮 BGMI <b>${esc(u.bgmiUid)}</b></span>` : ''}${u.bgmiUid && u.ffUid ? ' &nbsp;·&nbsp; ' : ''}${u.ffUid ? `<span data-copy="${esc(u.ffUid)}" style="cursor:pointer">🔥 FF <b>${esc(u.ffUid)}</b></span>` : ''}</div>` : '';
+const wireCopy = view => $$('[data-copy]', view).forEach(el => el.onclick = async () => { try { await navigator.clipboard.writeText(el.dataset.copy); toast('Copied ' + el.dataset.copy); } catch (_) { toast(el.dataset.copy); } });
 const link = (href, ic, label, sub = '') => `<a href="${href}" class="row" style="text-decoration:none;color:inherit;padding:12px 0"><span class="avatar sm" style="border-radius:12px">${icon(ic, 'width="18" height="18"')}</span><span class="grow"><b>${label}</b>${sub ? `<div class="small muted">${sub}</div>` : ''}</span><span class="muted">›</span></a>`;
 
 /* ---------- PROFILE (hub for everything else) ---------- */
 KF.views.profile = async view => {
   const me = KF.state.me, f = KF.state.family, admin = me.role !== 'member';
   view.innerHTML = `<div class="gap fade">
-    <div class="card center">${avatar(me, '')}<h2 style="margin-top:8px">${esc(me.name)}</h2><div class="small muted">${esc(me.email)}</div><div style="margin-top:6px"><span class="pill gold">${ROLE_LABEL[me.role]}</span> <span class="pill">${esc(f.name)}</span></div>
-      <div class="row" style="justify-content:center;margin-top:12px"><button class="btn small ghost" data-name>Edit name</button><button class="btn small ghost" data-photo>Change photo</button></div></div>
+    <div class="card center">${avatar(me, '')}<h2 style="margin-top:8px">${esc(me.name)}</h2><div class="small muted">${esc(me.email)}</div>${gameIds(me)}<div style="margin-top:6px"><span class="pill gold">${ROLE_LABEL[me.role]}</span> <span class="pill">${esc(f.name)}</span></div>
+      <div class="row" style="justify-content:center;margin-top:12px"><button class="btn small ghost" data-name>Edit profile</button><button class="btn small ghost" data-photo>Change photo</button></div></div>
     <div class="card list">
       ${link('#/shopping', 'cart', 'Shopping lists')}${link('#/expenses', 'money', 'Clan funds', 'Private')}${link('#/memories', 'photo', 'Memories & albums')}${link('#/polls', 'poll', 'Polls & voting')}${link('#/events', 'cal', 'Clan events')}${link('#/files', 'folder', 'File manager', 'Files stored in Google Drive')}</div>
     <div class="card list">
@@ -16,8 +19,9 @@ KF.views.profile = async view => {
     <div class="card list">${link('#/settings', 'gear', 'App settings', 'Theme, notifications')}${link('#/privacy', 'lock', 'Privacy & security')}${link('#/help', 'help', 'Help & support')}</div>
     <button class="btn ghost block" data-out>Log out</button>
     <div class="center small muted">HINDU ESPORTS · Together as One ✦</div></div>`;
-  $('[data-name]', view).onclick = async () => { const v = await formSheet('Your name', [{ name: 'name', label: 'Display name', value: me.name, required: true }]); if (v) try { const u = await api('/me', { method: 'PATCH', body: v }); Object.assign(KF.state.me, u); await KF.refreshFamily(); route(); } catch (e) { toast(e.message); } };
-  $('[data-photo]', view).onclick = async () => { const [file] = await pickFile('image/*'); if (!file) return; const fd = new FormData(); fd.append('file', file); try { const u = await api('/me/photo', { method: 'POST', body: fd }); Object.assign(KF.state.me, u); await KF.refreshFamily(); route(); } catch (e) { toast(e.message); } };
+  wireCopy(view);
+  $('[data-name]', view).onclick = async () => { const v = await formSheet('Your profile', [{ name: 'name', label: 'Display name', value: me.name, required: true }, { name: 'bgmiUid', label: 'BGMI UID (optional)', value: me.bgmiUid || '' }, { name: 'ffUid', label: 'Free Fire ID (optional)', value: me.ffUid || '' }]); if (v) try { const u = await api('/me', { method: 'PATCH', body: v }); Object.assign(KF.state.me, u); await KF.refreshFamily(); route(); } catch (e) { toast(e.message); } };
+  $('[data-photo]', view).onclick = async () => { const [file] = await pickFile('image/*'); if (!file) return; try { toast('Updating your photo…', 15000); const small = await shrinkImage(file); const fd = new FormData(); fd.append('file', small); const u = await api('/me/photo', { method: 'POST', body: fd }); Object.assign(KF.state.me, u); await KF.refreshFamily(); route(); toast('Profile photo updated'); } catch (e) { toast(e.message, 6000); } };
   $('[data-out]', view).onclick = () => KF.logout();
 };
 
@@ -25,11 +29,12 @@ KF.views.profile = async view => {
 KF.views.members = async view => {
   const me = KF.state.me, owner = me.role === 'owner';
   const ms = KF.state.members;
-  view.innerHTML = `<div class="gap fade"><div class="card"><div class="list">${ms.map(m => `<div class="row">${avatar(m)}<div class="grow"><b>${esc(m.name)}</b>${m.id === me.id ? ' <span class="small muted">(you)</span>' : ''}<div class="small muted">${ROLE_LABEL[m.role]} · joined ${fmtDate(m.joinedAt)}${KF.state.online.has(m.id) ? ' · 🟢 online' : ''}</div></div>
+  view.innerHTML = `<div class="gap fade"><div class="card"><div class="list">${ms.map(m => `<div class="row">${avatar(m)}<div class="grow"><b>${esc(m.name)}</b>${m.id === me.id ? ' <span class="small muted">(you)</span>' : ''}<div class="small muted">${ROLE_LABEL[m.role]} · joined ${fmtDate(m.joinedAt)}${KF.state.online.has(m.id) ? ' · 🟢 online' : ''}</div>${gameIds(m, 'left')}</div>
       ${m.id !== me.id ? `<button class="btn small ghost" data-dm="${m.id}">Chat</button>` : ''}
       ${(owner || (me.role === 'admin' && m.role === 'member')) && m.id !== me.id ? `<button class="icon-btn" data-man="${m.id}">${icon('more')}</button>` : ''}</div>`).join('')}</div></div>
     ${me.role !== 'member' ? '<a class="btn gold block" href="#/invitations" style="text-align:center;text-decoration:none">Invite someone</a>' : ''}
     ${owner ? '' : '<button class="btn ghost block danger" data-leave style="color:var(--danger)">Leave this clan</button>'}</div>`;
+  wireCopy(view);
   $$('[data-dm]', view).forEach(b => b.onclick = async () => { try { const r = await api('/dms', { method: 'POST', body: { userId: b.dataset.dm } }); location.hash = '#/room/' + r.id; } catch (e) { toast(e.message); } });
   $$('[data-man]', view).forEach(b => b.onclick = () => {
     const m = ms.find(x => x.id === b.dataset.man); const p = m.perms || {};
