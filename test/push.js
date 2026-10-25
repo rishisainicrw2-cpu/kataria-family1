@@ -12,7 +12,7 @@ async function call(cookie, method, url, body) {
 let proc;
 const start = () => new Promise((res, rej) => {
   proc = spawn(process.execPath, ['--disable-warning=ExperimentalWarning', path.join(__dirname, '..', 'server', 'index.js')],
-    { env: { ...process.env, PORT: String(PORT), DATA_DIR: DATA, GOOGLE_CLIENT_ID: '', GOOGLE_CLIENT_SECRET: '', PUSH_TEST: '1', SECRET_KEY: 'test-secret-key-for-push-0123456789', BASE_URL: 'https://example.onrender.com' } });
+    { env: { ...process.env, PORT: String(PORT), DATA_DIR: DATA, GOOGLE_CLIENT_ID: '', GOOGLE_CLIENT_SECRET: '', PUSH_TEST: '1', SECRET_KEY: 'test-secret-key-for-push-0123456789', BASE_URL: 'https://example.onrender.com', ANDROID_PACKAGE: 'com.example.app', ANDROID_SHA256: 'aa:bb:cc' } });
   let o = ''; proc.stdout.on('data', d => { o += d; if (o.includes('running on port')) res(); }); proc.stderr.on('data', d => { o += d; }); setTimeout(() => rej(new Error('start timeout\n' + o)), 10000);
 });
 const stop = () => new Promise(r => { proc.on('exit', r); proc.kill(); });
@@ -43,6 +43,8 @@ const stop = () => new Promise(r => { proc.on('exit', r); proc.kill(); });
   check('the preview is used once', again.data.body !== 'Match at 9 PM, be ready!', again.data);
   const own = await call(a.cookie, 'GET', '/api/notifications/latest');
   check('sender gets no alert about own message', hits.length === 1 && own.data.body !== 'Match at 9 PM, be ready!', own.data);
+  const al = await fetch(BASE + '/.well-known/assetlinks.json'); const alj = await al.json().catch(() => null);
+  check('Android app link file is published', al.status === 200 && alj?.[0]?.target?.package_name === 'com.example.app' && alj[0].target.sha256_cert_fingerprints[0] === 'AA:BB:CC', alj);
   await stop(); await start();
   const a2 = await call('', 'POST', '/api/auth/login', { email: 'leader@example.com', password: PW });
   const key2 = (await call(a2.cookie, 'GET', '/api/push/config')).data.publicKey;

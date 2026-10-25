@@ -105,6 +105,13 @@ function sendJson(res, status, data) {
 async function handle(req, res, authenticate) {
   securityHeaders(res);
   const url = new URL(req.url, 'http://x');
+  // Android app link: tells Android that the installed .apk is the official app of this website (so it opens full screen, without a browser bar).
+  // Set ANDROID_PACKAGE and ANDROID_SHA256 (comma separated) in the host settings after building the .apk.
+  if (url.pathname === '/.well-known/assetlinks.json') {
+    const pkg = (process.env.ANDROID_PACKAGE || '').trim(), fps = (process.env.ANDROID_SHA256 || '').split(',').map(x => x.trim().toUpperCase()).filter(Boolean);
+    if (!pkg || !fps.length) { res.writeHead(404); return res.end('Not found'); }
+    return sendJson(res, 200, [{ relation: ['delegate_permission/common.handle_all_urls'], target: { namespace: 'android_app', package_name: pkg, sha256_cert_fingerprints: fps } }]);
+  }
   if (!url.pathname.startsWith('/api/')) return serveStatic(req, res);
   try {
     // CSRF defence in depth: cookies are SameSite=Lax; additionally reject cross-origin state-changing requests.

@@ -19,6 +19,7 @@ async function call(cookie, method, url, body) {
   check('later account is not offered clan creation', (await call(b.cookie, 'GET', '/api/me')).data.canCreateClan === false);
   const r = await call(b.cookie, 'POST', '/api/family', { name: 'Rival Clan' });
   check('later account cannot create a clan (server refuses)', r.status === 400);
+  check('Android app link file is not published until it is set up', (await fetch(BASE + '/.well-known/assetlinks.json')).status === 404);
   proc.kill(); fs.rmSync(DATA, { recursive: true, force: true });
   console.log(`${passed} passed, ${failed} failed`); process.exit(failed ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });
