@@ -7,6 +7,6 @@
   "engines": { "node": ">=22.13" },
   "scripts": {
     "start": "node --disable-warning=ExperimentalWarning server/index.js",
-    "test": "node --disable-warning=ExperimentalWarning test/run.js && node --disable-warning=ExperimentalWarning test/drive.js && node --disable-warning=ExperimentalWarning test/pool.js && node --disable-warning=ExperimentalWarning test/backup.js"
+    "test": "node --disable-warning=ExperimentalWarning test/run.js && node --disable-warning=ExperimentalWarning test/drive.js && node --disable-warning=ExperimentalWarning test/pool.js && node --disable-warning=ExperimentalWarning test/backup.js && node --disable-warning=ExperimentalWarning test/single.js"
   }
 }

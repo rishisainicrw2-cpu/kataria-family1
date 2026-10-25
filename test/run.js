@@ -1,3 +1,4 @@
+process.env.SINGLE_CLAN = 'off'; // these suites create several clans on purpose
 // End-to-end tests: starts the real server on a throwaway database and drives the HTTP API.
 // Run: npm test   (needs Node 22.13+, no other dependencies)
 const { spawn } = require('child_process');

@@ -83,7 +83,7 @@ route('POST', '/api/auth/reset', async ctx => {
 }, { auth: false, limit: { bucket: 'reset2', max: 20 } });
 
 /* =============== ME =============== */
-route('GET', '/api/me', ctx => ({ user: userDto(ctx.user), family: !!ctx.user.familyId }));
+route('GET', '/api/me', ctx => ({ user: userDto(ctx.user), family: !!ctx.user.familyId, canCreateClan: !(singleClan() && q.get('SELECT 1 AS x FROM families LIMIT 1')) }));
 route('PATCH', '/api/me', ctx => {
   const b = ctx.body;
   const name = b.name !== undefined ? L.str(b.name, { name: 'Name', required: true, max: 60 }) : ctx.user.name;
@@ -171,9 +171,12 @@ route('DELETE', '/api/me', async ctx => {
 });
 
 /* =============== FAMILY =============== */
+// One clan per server: only the very first account can create it. Tests set SINGLE_CLAN=off.
+const singleClan = () => process.env.SINGLE_CLAN !== 'off';
 function familyDto(f) { return { id: f.id, name: f.name, accent: f.accent, currency: f.currency, sections: f.sections ? json(f.sections, null) : null, hasLogo: !!f.logo_mime }; }
 route('POST', '/api/family', ctx => {
   if (ctx.user.familyId) throw bad('You are already in a clan.');
+  if (singleClan() && q.get('SELECT 1 AS x FROM families LIMIT 1')) throw bad('Only the clan leader can create the clan. Ask your leader for an invitation code.');
   const name = L.str(ctx.body.name, { name: 'Clan name', required: true, max: 60 });
   const id = uid();
   tx(() => {

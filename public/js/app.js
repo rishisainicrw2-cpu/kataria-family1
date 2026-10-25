@@ -45,6 +45,7 @@ KF.refreshFamily = refreshFamily;
 async function boot() {
   try {
     const me = await api('/me');
+    KF.state.canCreateClan = !!me.canCreateClan;
     KF.state.me = me.user;
     if (!me.family) { applyTheme(); KF.showAuth('family'); return; }
     await refreshFamily();

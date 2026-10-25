@@ -1,3 +1,4 @@
+process.env.SINGLE_CLAN = 'off'; // these suites create several clans on purpose
 // Pooled storage: several Google accounts acting as ONE storage, tested against the local stand-in for Google (test/mock_google.js).
 // The stand-in keeps every account's files separate and enforces per-account quotas, so these tests prove files really land in,
 // and are fetched from, the right account. It does not prove a live Google account works.

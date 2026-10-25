@@ -1,3 +1,4 @@
+process.env.SINGLE_CLAN = 'off'; // these suites create several clans on purpose
 // Tests for encrypted database backups to Drive and restore-after-wipe (the free-hosting persistence story).
 // Uses the local stand-in for Google (test/mock_google.js). Run: npm test
 const { spawn } = require('child_process');

@@ -1,3 +1,4 @@
+process.env.SINGLE_CLAN = 'off'; // these suites create several clans on purpose
 // Google Drive integration tests against a LOCAL STAND-IN for Google (test/mock_google.js).
 // Run: npm test   — proves the app's OAuth/upload/download/permission/error code paths; it does NOT prove a live Google account works.
 const { spawn } = require('child_process');

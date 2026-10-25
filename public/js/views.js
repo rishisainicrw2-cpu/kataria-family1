@@ -65,15 +65,16 @@ KF.showAuth = (mode = 'welcome', note = '') => {
       <h2 style="color:#fff">Welcome, ${esc(KF.state.me.name.split(' ')[0])}</h2>
       <form data-join><label>Join with an invitation code</label><input name="code" value="${esc(code)}" placeholder="e.g. K7M2-QX9P" autocapitalize="characters" required>
         <button class="btn gold block" style="margin-top:8px">Join clan</button></form>
-      <div class="center small">— or —</div>
+      ${KF.state.canCreateClan ? `      <div class="center small">— or —</div>
       <form data-create><label>Create a new clan space</label><input name="name" placeholder="e.g. Hindu Esports" maxlength="60" required>
         <button class="btn block" style="margin-top:8px;background:var(--blue)">Create clan</button></form>
+` : ''}
       <div class="err"></div>
       <p class="center small"><a href="#" data-out>Log out</a></p></div>`;
     const err = $('.err', el);
     $('[data-join]', el).onsubmit = async e => { e.preventDefault(); err.textContent = '';
       try { await api('/family/join', { method: 'POST', body: { code: e.target.code.value } }); sessionStorage.removeItem('kf_invite'); history.replaceState(null, '', '/'); await KF.boot(); } catch (ex) { err.textContent = ex.message; } };
-    $('[data-create]', el).onsubmit = async e => { e.preventDefault(); err.textContent = '';
+    if ($('[data-create]', el)) $('[data-create]', el).onsubmit = async e => { e.preventDefault(); err.textContent = '';
       try { await api('/family', { method: 'POST', body: { name: e.target.name.value } }); await KF.boot(); } catch (ex) { err.textContent = ex.message; } };
     $('[data-out]', el).onclick = async e => { e.preventDefault(); await KF.logout(); };
   }
