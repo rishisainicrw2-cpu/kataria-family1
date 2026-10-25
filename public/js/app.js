@@ -55,6 +55,7 @@ async function boot() {
     loadRooms().catch(() => {});
     if (!location.hash) location.hash = '#/home'; else route();
     setupPush();
+    setTimeout(askAlerts, 1800);
   } catch (e) {
     if (e.status === 401) { applyTheme(); KF.showAuth('welcome'); }
     else { $('#boot').innerHTML += `<p class="center" style="color:#ffb3bd">${esc(e.message)}<br><button class="btn gold" onclick="location.reload()" style="margin-top:12px">Retry</button></p>`; $('#boot .spinner')?.remove(); }
@@ -102,6 +103,28 @@ async function setupPush() {
   } catch (_) {}
 }
 KF.setupPush = setupPush;
+
+/* Right after login: ask the person once to allow phone alerts (browsers only show their own permission box after a tap, so we show our own first) */
+const store = { get: k => { try { return localStorage.getItem(k); } catch (_) { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch (_) {} } };
+function askAlerts() {
+  if (!KF.state.me || document.querySelector('.sheet-bg')) return;
+  const snooze = +store.get('kf_alerts_snooze') || 0; if (Date.now() < snooze) return;
+  const later = () => store.set('kf_alerts_snooze', String(Date.now() + 2 * 86400000));
+  const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) && !(navigator.standalone || matchMedia('(display-mode: standalone)').matches);
+  if (ios) { // iPhone only allows alerts for apps added to the Home Screen
+    if (store.get('kf_ios_hint')) return; store.set('kf_ios_hint', '1');
+    return sheet(`<div class="center"><div style="font-size:2.4rem">🔔</div><h2>Get phone alerts</h2><p class="muted">On iPhone, first add this app to your Home Screen:<br><b>Share</b> button → <b>Add to Home Screen</b>.<br>Then open it from there and allow alerts.</p><button class="btn gold block" data-ok>OK</button></div>`, (s, close) => { $('[data-ok]', s).onclick = close; });
+  }
+  if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window) || Notification.permission !== 'default') return;
+  sheet(`<div class="center"><div style="font-size:2.4rem">🔔</div><h2>Allow phone alerts?</h2>
+    <p class="muted">Get a notification when your clan messages you, plans a match or posts news, even when the app is closed.</p>
+    <button class="btn gold block" data-allow>Allow alerts</button>
+    <button class="btn ghost block" data-later style="margin-top:8px">Not now</button></div>`, (s, close) => {
+    $('[data-allow]', s).onclick = async () => { close(); try { const r = await Notification.requestPermission(); if (r === 'granted') { await setupPush(); toast('Phone alerts are on 🔔'); if (location.hash.startsWith('#/home')) route(); } else later(); } catch (_) { later(); } };
+    $('[data-later]', s).onclick = () => { later(); close(); };
+  });
+}
+KF.askAlerts = askAlerts;
 
 /* PWA install prompt (Android Chrome) */
 window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); KF.installEvt = e; });
