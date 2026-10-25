@@ -361,7 +361,11 @@ route('POST', '/api/rooms/:id/messages', ctx => {
   // notifications: mentions & replies create in-app rows; everyone else (unmuted, offline) gets a push tickle
   const audience = L.roomAudience(r).filter(x => x !== ctx.user.id);
   const first = n => n.split(/\s+/)[0].toLowerCase();
-  const mentioned = new Set(); (text.match(/@(\w+)/g) || []).forEach(m => { const nm = m.slice(1).toLowerCase(); q.all('SELECT u.id,u.name FROM users u JOIN memberships s ON s.user_id=u.id WHERE s.family_id=?', r.family_id).forEach(u => { if (first(u.name) === nm && audience.includes(u.id)) mentioned.add(u.id); }); });
+  // @FirstName or @FirstLast (no space) tags one person; @everyone / @all tags the whole clan (leaders and co-leaders only, so it cannot be spammed)
+  const mentioned = new Set(); const fam = q.all('SELECT u.id,u.name FROM users u JOIN memberships s ON s.user_id=u.id WHERE s.family_id=?', r.family_id);
+  (text.match(/@(\w+)/g) || []).forEach(m => { const nm = m.slice(1).toLowerCase();
+    if ((nm === 'everyone' || nm === 'all') && L.isAdmin(ctx.user)) audience.forEach(a => mentioned.add(a));
+    fam.forEach(u => { if ((first(u.name) === nm || u.name.replace(/\s+/g, '').toLowerCase() === nm) && audience.includes(u.id)) mentioned.add(u.id); }); });
   if (replyTo) { const orig = q.get('SELECT user_id FROM messages WHERE id=?', replyTo); if (orig?.user_id && audience.includes(orig.user_id)) mentioned.add(orig.user_id); }
   const rname = r.type === 'dm' ? ctx.user.name : r.name;
   const url = '#/room/' + r.id;

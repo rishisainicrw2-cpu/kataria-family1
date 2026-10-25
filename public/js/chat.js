@@ -62,11 +62,45 @@ KF.views.room = async (view, params) => {
     <div class="composer">
       <button class="icon-btn" data-att title="Attach">${icon('clip')}</button>
       <button class="icon-btn" data-emo title="Emoji">😊</button>
+      <button class="icon-btn" data-at title="Tag a member" style="font-weight:800;font-size:1.15rem">@</button>
       <textarea rows="1" placeholder="Message" data-in aria-label="Message"></textarea>
       <button class="icon-btn" data-mic title="Voice message">${icon('mic')}</button>
       <button class="btn gold" data-send aria-label="Send">${icon('send')}</button></div>`;
   const body = $('[data-body]', view), input = $('[data-in]', view);
 
+  /* ---- @mentions: names that belong to a real member (or @everyone) are highlighted; the one tagging you glows ---- */
+  const firstName = n => (n || '').trim().split(/\s+/)[0].toLowerCase();
+  const squash = n => (n || '').replace(/\s+/g, '').toLowerCase();
+  const tokenFor = u => KF.state.members.filter(x => firstName(x.name) === firstName(u.name)).length > 1 ? u.name.replace(/\s+/g, '') : u.name.trim().split(/\s+/)[0];
+  const mentionHtml = t => t.replace(/@(\w+)/g, (all, w) => {
+    const k = w.toLowerCase(), everyone = k === 'everyone' || k === 'all';
+    const hit = KF.state.members.find(u => firstName(u.name) === k || squash(u.name) === k);
+    if (!hit && !everyone) return all;
+    return `<span class="mention ${everyone || (hit && hit.id === me.id) ? 'me' : ''}">@${w}</span>`;
+  });
+  const mentionsMe = txt => (txt || '').match(/@(\w+)/g)?.some(w => { const k = w.slice(1).toLowerCase(); return k === 'everyone' || k === 'all' || firstName(me.name) === k || squash(me.name) === k; });
+  const pop = document.createElement('div'); pop.className = 'mentions hidden'; $('.composer', view).appendChild(pop);
+  let atFrom = -1;
+  function updateMentions() {
+    const pos = input.selectionStart ?? input.value.length;
+    const m = /(^|\s)@(\w*)$/.exec(input.value.slice(0, pos));
+    if (!m || room.type === 'dm') { pop.classList.add('hidden'); atFrom = -1; return; }
+    atFrom = pos - m[2].length - 1; const term = m[2].toLowerCase();
+    const list = [];
+    if (L_isStaff() && 'everyone'.startsWith(term)) list.push({ everyone: true });
+    KF.state.members.filter(u => u.id !== me.id && (!term || firstName(u.name).startsWith(term) || squash(u.name).startsWith(term))).sort((a, b) => rankOf(a).n - rankOf(b).n || a.name.localeCompare(b.name)).slice(0, 12).forEach(u => list.push({ u }));
+    if (!list.length) { pop.classList.add('hidden'); return; }
+    pop.innerHTML = list.map((x, i) => x.everyone
+      ? `<button type="button" data-mi="${i}"><span class="mav">📢</span><span class="grow"><b>@everyone</b><small>Alert the whole clan</small></span></button>`
+      : `<button type="button" data-mi="${i}">${avatar(x.u, '')}<span class="grow"><b>${esc(x.u.name)}</b><small>${rankOf(x.u).icon} ${rankOf(x.u).label}</small></span></button>`).join('');
+    pop.classList.remove('hidden');
+    $$('[data-mi]', pop).forEach(b => {
+      b.onmousedown = e => e.preventDefault(); // keep the keyboard open
+      b.onclick = () => { const x = list[+b.dataset.mi]; const tok = x.everyone ? 'everyone' : tokenFor(x.u); const end = input.selectionStart ?? input.value.length;
+        input.value = input.value.slice(0, atFrom) + '@' + tok + ' ' + input.value.slice(end); const c = atFrom + tok.length + 2; input.focus(); input.setSelectionRange(c, c); pop.classList.add('hidden'); input.dispatchEvent(new Event('input')); };
+    });
+  }
+  const L_isStaff = () => me.role === 'owner' || me.role === 'admin';
   const bubble = m => {
     const mine = m.userId === me.id, u = member(m.userId);
     let inner = '';
@@ -80,12 +114,12 @@ KF.views.room = async (view, params) => {
       else if (f.mime.startsWith('audio/')) inner += `<audio controls preload="none" src="${url}" style="max-width:220px"></audio>`;
       else inner += `<a href="${url}" download="${esc(f.name)}" style="color:inherit">📄 ${esc(f.name)} <span class="small">(${fmtSize(f.size)})</span></a>`;
     }
-    if (m.text) inner += `<div>${esc(m.text).replace(/@(\w+)/g, '<b>@$1</b>').replace(/\n/g, '<br>')}</div>`;
+    if (m.text) inner += `<div>${mentionHtml(esc(m.text)).replace(/\n/g, '<br>')}</div>`;
     const reacts = Object.entries(m.reactions || {}).filter(([, us]) => us.length);
     if (reacts.length) inner += `<div class="reacts">${reacts.map(([e, us]) => `<span data-react="${e}" title="${us.map(id => member(id)?.name || '').join(', ')}">${e} ${us.length}</span>`).join('')}</div>`;
     const read = mine && room.type === 'dm' ? (m.readBy && m.readBy.length ? '✓✓' : '✓') : (mine ? (m.readBy && m.readBy.length ? '✓✓' : '✓') : '');
     inner += `<div class="meta">${m.editedAt ? '<span>edited</span>' : ''}<span>${fmtTime(m.createdAt)}</span>${mine ? `<span style="color:${m.readBy?.length ? 'var(--gold)' : 'inherit'}">${read}</span>` : ''}</div>`;
-    return `<div class="msg ${mine ? 'me' : ''} ${m.pinned ? 'pinned' : ''}" data-id="${m.id}">${inner}</div>`;
+    return `<div class="msg ${mine ? 'me' : ''} ${m.pinned ? 'pinned' : ''} ${!mine && mentionsMe(m.text) ? 'tagged' : ''}" data-id="${m.id}">${inner}</div>`;
   };
   const render = (keepScroll) => {
     const atBottom = body.scrollHeight - body.scrollTop - body.clientHeight < 80;
@@ -133,7 +167,7 @@ KF.views.room = async (view, params) => {
     try {
       const m = await api(`/rooms/${roomId}/messages`, { method: 'POST', body: { text, replyTo: replyTo?.id || null, clientId, ...extra } });
       if (!msgs.some(x => x.id === m.id)) { msgs.push(m); render(); }
-      input.value = ''; input.style.height = 'auto'; clearReply();
+      input.value = ''; input.style.height = 'auto'; clearReply(); pop.classList.add('hidden');
     } catch (e) { toast(e.offline ? 'Offline — message not sent. Try again when connected.' : e.message); }
     finally { pending.delete(clientId); btn.disabled = false; input.focus(); }
   }
@@ -141,7 +175,10 @@ KF.views.room = async (view, params) => {
   $('[data-send]', view).onclick = () => send();
   input.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey && matchMedia('(min-width:700px)').matches) { e.preventDefault(); send(); } });
   let lastTyping = 0;
-  input.addEventListener('input', () => { input.style.height = 'auto'; input.style.height = Math.min(input.scrollHeight, 110) + 'px'; if (Date.now() - lastTyping > 2000) { lastTyping = Date.now(); KF.send({ type: 'typing', roomId }); } });
+  input.addEventListener('input', () => { updateMentions(); input.style.height = 'auto'; input.style.height = Math.min(input.scrollHeight, 110) + 'px'; if (Date.now() - lastTyping > 2000) { lastTyping = Date.now(); KF.send({ type: 'typing', roomId }); } });
+  ['click', 'keyup'].forEach(ev => input.addEventListener(ev, updateMentions));
+  input.addEventListener('blur', () => setTimeout(() => pop.classList.add('hidden'), 150));
+  $('[data-at]', view).onclick = () => { const p = input.selectionStart ?? input.value.length; const need = p > 0 && !/\s$/.test(input.value.slice(0, p)); input.value = input.value.slice(0, p) + (need ? ' @' : '@') + input.value.slice(p); const c = p + (need ? 2 : 1); input.focus(); input.setSelectionRange(c, c); updateMentions(); };
   $('[data-rx]', view).onclick = () => { clearReply(); editing = null; input.value = ''; };
 
   /* message actions */

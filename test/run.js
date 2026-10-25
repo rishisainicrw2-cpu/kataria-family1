@@ -210,6 +210,19 @@ async function register(name, email) {
   check('assign task', task.status === 200, task.data);
   const notes = (await meera.get('/api/notifications')).data;
   check('assignee gets notification', notes.some(n => /diyas|task/i.test(n.title + n.body)), notes.map(n => n.title));
+  section('@mentions');
+  const tagCount = async c => (await c.get('/api/notifications')).data.filter(n => n.kind === 'mention' || /in /.test(n.title)).length;
+  await meera.post(`/api/rooms/${general.id}/mute`, { muted: false });
+  const before = await tagCount(meera);
+  await asha.post(`/api/rooms/${general.id}/messages`, { text: 'hey @Meera ready?' });
+  check('@FirstName notifies that member', (await tagCount(meera)) === before + 1);
+  await asha.post(`/api/rooms/${general.id}/messages`, { text: 'hey @MeeraSharma check this' }); // full name without space (only counts if the name matches)
+  const b2 = await tagCount(meera);
+  await asha.post(`/api/rooms/${general.id}/messages`, { text: '@everyone scrim tonight' });
+  check('leader @everyone notifies members', (await tagCount(meera)) === b2 + 1);
+  const b3 = await tagCount(asha);
+  await meera.post(`/api/rooms/${general.id}/messages`, { text: '@everyone spam' });
+  check('a plain member cannot use @everyone', (await tagCount(asha)) === b3);
   const poll = await asha.post('/api/polls', { question: 'Which day?', options: ['Saturday', 'Sunday'], planId: plan.id });
   check('create poll', poll.status === 200, poll.data);
   const pollList = (await meera.get('/api/polls')).data; const pl = pollList.find(p => p.question === 'Which day?');
