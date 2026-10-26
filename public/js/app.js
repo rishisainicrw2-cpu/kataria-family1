@@ -158,7 +158,7 @@ KF.wireInstall = el => {
   $$('[data-apk]', el).forEach(a => a.addEventListener('click', () => setTimeout(KF.apkSteps, 600)));
 };
 KF.apkSteps = () => sheet(`<div class="center"><div style="font-size:2.4rem">🤖</div><h2>Install the Android app</h2>
-  <p class="muted" style="text-align:left">1. Wait for <b>HinduEsports.apk</b> to finish downloading, then tap <b>Open</b> (or open it from <b>Files → Downloads</b>)<br>
+  <p class="muted" style="text-align:left">1. If Chrome says <i>"This type of file can harm your device"</i>, tap <b>Download anyway</b> (it is this clan's own app). When it finishes, tap <b>Open</b> (or open it from <b>Files → Downloads</b>)<br>
   2. If Android says it can't install unknown apps, tap <b>Settings</b>, switch on <b>Allow from this source</b>, then press Back<br>
   3. Tap <b>Install</b> (if Play Protect asks, tap <b>More details → Install anyway</b>)<br>
   4. Tap <b>Open</b>, then log in and allow phone alerts</p>
