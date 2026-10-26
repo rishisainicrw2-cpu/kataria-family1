@@ -4,6 +4,22 @@ process.env.SINGLE_CLAN = 'off';
 const PORT = 4100 + Math.floor(Math.random() * 300), PUSHPORT = PORT + 400, DATA = fs.mkdtempSync(path.join(os.tmpdir(), 'kf-push-')), BASE = `http://127.0.0.1:${PORT}`;
 let passed = 0, failed = 0; const check = (n, c, d) => { c ? passed++ : failed++; console.log(`  ${c ? '✓' : '✗'} ${n}${c ? '' : ' ' + (d ? JSON.stringify(d) : '')}`); };
 const PW = 'correct-horse-9';
+// Minimal zip reader (reads the central directory) so the test can look inside the APK without extra packages.
+function zipEntry(buf, name) {
+  let e = buf.length - 22; while (e >= 0 && buf.readUInt32LE(e) !== 0x06054b50) e--;
+  if (e < 0) return null;
+  const n = buf.readUInt16LE(e + 10); let p = buf.readUInt32LE(e + 16);
+  for (let i = 0; i < n; i++) {
+    if (buf.readUInt32LE(p) !== 0x02014b50) return null;
+    const method = buf.readUInt16LE(p + 10), csize = buf.readUInt32LE(p + 20), nlen = buf.readUInt16LE(p + 28), elen = buf.readUInt16LE(p + 30), clen = buf.readUInt16LE(p + 32), off = buf.readUInt32LE(p + 42);
+    if (buf.toString('utf8', p + 46, p + 46 + nlen) === name) {
+      const start = off + 30 + buf.readUInt16LE(off + 26) + buf.readUInt16LE(off + 28), data = buf.subarray(start, start + csize);
+      return method === 0 ? data : require('zlib').inflateRawSync(data);
+    }
+    p += 46 + nlen + elen + clen;
+  }
+  return null;
+}
 async function call(cookie, method, url, body) {
   const r = await fetch(BASE + url, { method, headers: { 'content-type': 'application/json', ...(cookie ? { cookie } : {}) }, body: body ? JSON.stringify(body) : undefined, redirect: 'manual' });
   const sc = (r.headers.getSetCookie?.() || []).map(c => c.split(';')[0]).find(c => !c.endsWith('='));
@@ -45,6 +61,14 @@ const stop = () => new Promise(r => { proc.on('exit', r); proc.kill(); });
   check('sender gets no alert about own message', hits.length === 1 && own.data.body !== 'Match at 9 PM, be ready!', own.data);
   const al = await fetch(BASE + '/.well-known/assetlinks.json'); const alj = await al.json().catch(() => null);
   check('Android app link file is published', al.status === 200 && alj?.[0]?.target?.package_name === 'com.example.app' && alj[0].target.sha256_cert_fingerprints[0] === 'AA:BB:CC', alj);
+  check('Android app link file is plain JSON (Android requires it)', /^application\/json/.test(al.headers.get('content-type') || ''), al.headers.get('content-type'));
+  // The Android app (APK): downloadable as a file, and really the clan's app.
+  const apk = await fetch(BASE + '/hindu-esports.apk'); const buf = Buffer.from(await apk.arrayBuffer());
+  check('Android app (APK) downloads as a file', apk.status === 200 && apk.headers.get('content-type') === 'application/vnd.android.package-archive' && /^attachment/.test(apk.headers.get('content-disposition') || '') && Number(apk.headers.get('content-length')) === buf.length && buf.length > 50000, { s: apk.status, t: apk.headers.get('content-type'), n: buf.length });
+  const manifest = zipEntry(buf, 'AndroidManifest.xml');
+  const has = (b, s) => b && (b.includes(Buffer.from(s, 'utf8')) || b.includes(Buffer.from(s, 'utf16le')));
+  check('APK is the Hindu Esports app for this website', has(manifest, 'com.hinduesports.clan') && has(manifest, 'hindu-esports.onrender.com') && has(manifest, 'android.support.customtabs.action.CustomTabsService'), manifest && manifest.length);
+  check('APK carries the app code and a v2 signature', !!zipEntry(buf, 'classes.dex') && buf.includes(Buffer.from('APK Sig Block 42')), null);
   await stop(); await start();
   const a2 = await call('', 'POST', '/api/auth/login', { email: 'leader@example.com', password: PW });
   const key2 = (await call(a2.cookie, 'GET', '/api/push/config')).data.publicKey;

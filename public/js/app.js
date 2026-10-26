@@ -128,8 +128,42 @@ KF.askAlerts = askAlerts;
 
 /* PWA install prompt (Android Chrome) */
 window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); KF.installEvt = e; });
-KF.isInstalled = () => !!(navigator.standalone || matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches);
-window.addEventListener('appinstalled', () => { KF.installEvt = null; toast('App installed ✓ Open it from your home screen', 5000); document.querySelectorAll('[data-install]').forEach(b => b.classList.add('hidden')); });
+// The Android app (APK) opens this site inside Chrome without a browser bar and tells the page where it came from.
+try { if ((document.referrer || '').startsWith('android-app://')) sessionStorage.setItem('kf_in_app', '1'); } catch (_) {}
+KF.inAndroidApp = () => { try { return sessionStorage.getItem('kf_in_app') === '1'; } catch (_) { return false; } };
+KF.isInstalled = () => !!(navigator.standalone || matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || KF.inAndroidApp());
+window.addEventListener('appinstalled', () => { KF.installEvt = null; toast('App installed ✓ Open it from your home screen', 5000); document.querySelectorAll('[data-install],[data-apk]').forEach(b => b.classList.add('hidden')); });
+
+/* Invitation code: kept for 3 days on this phone, so it is still there after the app has been installed and opened. */
+KF.inviteGet = () => {
+  try { const [c, t] = (localStorage.getItem('kf_invite') || '').split('|'); if (c && Date.now() - Number(t) < 3 * 864e5) return c; } catch (_) {}
+  try { return sessionStorage.getItem('kf_invite') || ''; } catch (_) { return ''; }
+};
+KF.inviteSet = c => { try { sessionStorage.setItem('kf_invite', c); } catch (_) {} try { localStorage.setItem('kf_invite', c + '|' + Date.now()); } catch (_) {} };
+KF.inviteClear = () => { try { sessionStorage.removeItem('kf_invite'); } catch (_) {} try { localStorage.removeItem('kf_invite'); } catch (_) {} };
+
+/* Android app file (APK). Android phones get "Download Android app" first, then "add to home screen"; iPhones and computers get the normal install button. */
+KF.isAndroid = /Android/i.test(navigator.userAgent);
+KF.APK_URL = '/hindu-esports.apk';
+KF.installHtml = big => {
+  if (KF.isInstalled()) return '';
+  const note = t => big ? `<div class="small center" style="margin:-4px 0 2px;color:#ffd9bf;opacity:.85">${t}</div>` : '';
+  if (!KF.isAndroid) return `<button type="button" class="btn install block${big ? ' big' : ''}" data-install>📲 Install app</button>${note('Install first: opens like a real app and gives phone alerts')}`;
+  return `<a class="btn install block${big ? ' big' : ''}" href="${KF.APK_URL}" download="HinduEsports.apk" data-apk>⬇️ Download Android app</a>${note('Free app file · opens full screen like a real app · phone alerts')}`
+    + '<button type="button" class="btn ghost block" style="color:#fff;border-color:rgba(255,255,255,.3)" data-install>📲 Or add to home screen</button>';
+};
+KF.wireInstall = el => {
+  $$('[data-install]', el).forEach(b => b.onclick = () => KF.installApp());
+  // the download itself starts normally; the help sheet only explains what to tap when it has finished
+  $$('[data-apk]', el).forEach(a => a.addEventListener('click', () => setTimeout(KF.apkSteps, 600)));
+};
+KF.apkSteps = () => sheet(`<div class="center"><div style="font-size:2.4rem">🤖</div><h2>Install the Android app</h2>
+  <p class="muted" style="text-align:left">1. Wait for <b>HinduEsports.apk</b> to finish downloading, then tap <b>Open</b> (or open it from <b>Files → Downloads</b>)<br>
+  2. If Android says it can't install unknown apps, tap <b>Settings</b>, switch on <b>Allow from this source</b>, then press Back<br>
+  3. Tap <b>Install</b> (if Play Protect asks, tap <b>More details → Install anyway</b>)<br>
+  4. Tap <b>Open</b>, then log in and allow phone alerts</p>
+  <p class="small muted">The app is just this website in full screen, so your chats stay in sync with the web version.</p>
+  <button class="btn gold block" data-ok>OK</button></div>`, (s, close) => { $('[data-ok]', s).onclick = close; });
 // Install the app: Android Chrome installs it as a real app (own icon, full screen, no browser bar). iPhone and other browsers get the steps.
 KF.installApp = async () => {
   if (KF.installEvt) { const ev = KF.installEvt; KF.installEvt = null; try { await ev.prompt(); } catch (_) {} return; }

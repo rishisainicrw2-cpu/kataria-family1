@@ -2,3 +2,9 @@ data/
 node_modules/
 *.sqlite
 *.key
+
+# Android app signing keys and build output must never be committed
+*.p12
+*.jks
+*.keystore
+android/build/

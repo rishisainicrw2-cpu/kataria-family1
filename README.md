@@ -23,7 +23,7 @@ chat, and an installable PWA frontend. **No computer is needed** — everything 
 | **Real Google Drive** with your account and folder | ⚠️ **Not tested** — needs your credentials (Part 3) |
 | **Push notifications on a real phone** | ⚠️ **Not tested** — implemented, but no real push service was reachable |
 | **Voice messages, camera/photo picker on a real Android phone** | ⚠️ **Not tested** on a real device |
-| **Android APK** | ❌ **Not built.** This is an installable PWA (Part 4) |
+| **Android APK** | ⚠️ **Built, signed and checked** (package, signature, alignment, download) — but **not run on a real phone** from here. It is a thin Trusted Web Activity launcher (`android/`) |
 
 Please treat the three ⚠️ items as "should work, verify on your phone".
 
@@ -115,8 +115,19 @@ Files are never made public. Clan members download through the app, which checks
 3. Sign up → **Create a clan** → **Profile → Invitations** to create a code/link and send it to relatives via WhatsApp/SMS.
 4. Turn on notifications in **Profile → App Settings** if you want them.
 
-*Limits:* this is a PWA, not an APK. The Android icon/name come from the web manifest. A real APK would require a build tool
-(e.g. PWABuilder, which can package a PWA from a phone browser — untested here) and is optional.
+### The Android app (APK)
+
+Android phones see **Download Android app** as the first button on the invitation / welcome screen (file: `/hindu-esports.apk`).
+It is the website opened full screen from Chrome (a *Trusted Web Activity*), so it always shows the latest version of the site.
+For the app to open **without any browser bar**, the host needs these two settings (Render → Environment):
+
+| Setting | Value |
+|---|---|
+| `ANDROID_PACKAGE` | `com.hinduesports.clan` |
+| `ANDROID_SHA256` | the fingerprint of the key the APK is signed with (given with the keystore; several can be separated by commas) |
+
+Keep the signing key (`hinduesports.p12`) and its password private and **outside** this repository. How the app is built and rebuilt: `android/README.md`.
+iPhones cannot install APK files; they use **Share → Add to Home Screen** (the same install button).
 
 ---
 

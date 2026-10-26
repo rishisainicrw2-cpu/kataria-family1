@@ -288,3 +288,6 @@ input:focus,select:focus,textarea:focus{border-color:var(--gold);box-shadow:0 0 
 .btn.install.big{padding:16px 18px;font-size:1.05rem;border-radius:20px;animation:pulse 2.4s ease-in-out infinite}
 @keyframes pulse{50%{box-shadow:var(--spec),0 6px 30px rgba(255,138,53,.9)}}
 @media (prefers-reduced-motion:reduce){.btn.install.big{animation:none}}
+
+/* download link styled as a button (Android app file) */
+a.btn{display:block;text-align:center;text-decoration:none;box-sizing:border-box}

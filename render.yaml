@@ -16,3 +16,8 @@ services:
         sync: false
       - key: GOOGLE_CLIENT_SECRET
         sync: false
+      # Android app (APK): lets the app open the site full screen without a browser bar. Both values are public.
+      - key: ANDROID_PACKAGE
+        value: com.hinduesports.clan
+      - key: ANDROID_SHA256
+        value: "96:88:86:43:AF:1A:BD:DE:E3:9F:86:9E:10:8C:A0:83:0A:17:47:BA:8C:75:3D:B3:2F:35:A9:4F:8A:54:1D:5A"

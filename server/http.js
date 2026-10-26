@@ -73,7 +73,7 @@ function rateLimit(key, max, windowMs) {
 setInterval(() => { const t = Date.now(); for (const [k, v] of hits) if (t > v.reset) hits.delete(k); }, 60000).unref();
 const clientIp = req => (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket.remoteAddress;
 
-const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon', '.webmanifest': 'application/manifest+json', '.json': 'application/json' };
+const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon', '.webmanifest': 'application/manifest+json', '.json': 'application/json', '.apk': 'application/vnd.android.package-archive' };
 function serveStatic(req, res) {
   let p = decodeURIComponent(new URL(req.url, 'http://x').pathname);
   if (p === '/') p = '/index.html';
@@ -83,7 +83,10 @@ function serveStatic(req, res) {
     return serveStatic({ ...req, url: '/' }, res);
   }
   const ext = path.extname(file);
-  res.writeHead(200, { 'Content-Type': MIME[ext] || 'application/octet-stream', 'Cache-Control': ext === '.html' || file.endsWith('sw.js') ? 'no-cache' : 'public, max-age=300' });
+  const headers = { 'Content-Type': MIME[ext] || 'application/octet-stream', 'Cache-Control': ext === '.html' || file.endsWith('sw.js') ? 'no-cache' : 'public, max-age=300' };
+  // The Android app file (.apk) is always fetched fresh and saved as a file, never shown inside the browser.
+  if (ext === '.apk') Object.assign(headers, { 'Cache-Control': 'no-cache', 'Content-Disposition': 'attachment; filename="HinduEsports.apk"', 'Content-Length': fs.statSync(file).size });
+  res.writeHead(200, headers);
   fs.createReadStream(file).pipe(res);
 }
 

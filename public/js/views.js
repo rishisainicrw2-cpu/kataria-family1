@@ -6,21 +6,21 @@ KF.showAuth = (mode = 'welcome', note = '') => {
   $('#boot').classList.add('hidden'); $('#app').classList.add('hidden');
   const el = authEl(); el.classList.remove('hidden');
   const params = new URLSearchParams(location.search);
-  const inviteCode = params.get('invite') || sessionStorage.getItem('kf_invite') || '';
-  if (params.get('invite')) sessionStorage.setItem('kf_invite', inviteCode);
+  // The invite code is also kept on the phone for a few days, so it is still there after the Android app (APK) is installed and opened.
+  const inviteCode = params.get('invite') || KF.inviteGet();
+  if (params.get('invite')) KF.inviteSet(inviteCode);
   if (mode === 'welcome') {
-    const installBtn = KF.isInstalled() ? '' : `<button class="btn install block big" data-install>📲 Install app</button><div class="small center" style="margin:-4px 0 2px;color:#ffd9bf;opacity:.85">Install first: opens like a real app and gives phone alerts</div>`;
     el.innerHTML = `${brand}<div class="panel gap">
-      ${installBtn}
+      ${KF.installHtml(true)}
       ${inviteCode ? `<div class="card" style="text-align:center;padding:12px;background:rgba(255,178,30,.14);border-color:rgba(255,178,30,.5)"><div style="font-size:1.4rem">🎉</div><b>You are invited to the clan!</b><div class="small" style="margin-top:2px">Code <b style="letter-spacing:.12em">${esc(inviteCode)}</b> is saved. Create an account or log in to join.</div></div>` : ''}
       <p class="center" style="margin:0;color:#ffd9bf">A private space for your clan to chat, plan matches and share highlights.</p>
       <button class="btn gold block" data-m="register">Create account</button>
       <button class="btn ghost block" style="color:#fff;border-color:rgba(255,255,255,.3)" data-m="login">I already have an account</button></div>`;
     $$('[data-m]', el).forEach(b => b.onclick = () => KF.showAuth(b.dataset.m));
-    const ib = $('[data-install]', el); if (ib) ib.onclick = () => KF.installApp();
+    KF.wireInstall(el);
   } else if (mode === 'login' || mode === 'register') {
     const reg = mode === 'register';
-    const inst = inviteCode && !KF.isInstalled() ? '<button type="button" class="btn install block" data-install style="margin-bottom:6px">📲 Install app first</button>' : '';
+    const inst = inviteCode && !KF.isInstalled() ? `<div style="display:grid;gap:8px;margin-bottom:8px">${KF.installHtml(false)}</div>` : '';
     el.innerHTML = `${brand}<form class="panel" novalidate>
       ${inst}
       ${reg ? '<label>Your name</label><input name="name" autocomplete="name" required maxlength="60">' : ''}
@@ -34,10 +34,10 @@ KF.showAuth = (mode = 'welcome', note = '') => {
         · <a href="#" data-m="welcome">Back</a></p></form>`;
     $$('[data-m]', el).forEach(b => b.onclick = e => { e.preventDefault(); KF.showAuth(b.dataset.m); });
     const form = $('form', el);
-    const ib2 = $('[data-install]', el); if (ib2) ib2.onclick = () => KF.installApp();
+    KF.wireInstall(el);
     form.onsubmit = async e => {
       e.preventDefault();
-      const btn = $('button.btn:not(.install)', form), err = $('.err', form);
+      const btn = $('button.btn.gold', form), err = $('.err', form);
       const body = Object.fromEntries(new FormData(form));
       if (!body.email || !body.password || (reg && !body.name)) { err.textContent = 'Please fill in every field.'; return; }
       if (reg && body.password.length < 8) { err.textContent = 'Password must be at least 8 characters.'; return; }
@@ -79,7 +79,7 @@ KF.showAuth = (mode = 'welcome', note = '') => {
       <p class="center small"><a href="#" data-out>Log out</a></p></div>`;
     const err = $('.err', el);
     $('[data-join]', el).onsubmit = async e => { e.preventDefault(); err.textContent = '';
-      try { await api('/family/join', { method: 'POST', body: { code: e.target.code.value } }); sessionStorage.removeItem('kf_invite'); history.replaceState(null, '', '/'); await KF.boot(); } catch (ex) { err.textContent = ex.message; } };
+      try { await api('/family/join', { method: 'POST', body: { code: e.target.code.value } }); KF.inviteClear(); history.replaceState(null, '', '/'); await KF.boot(); } catch (ex) { err.textContent = ex.message; } };
     if ($('[data-create]', el)) $('[data-create]', el).onsubmit = async e => { e.preventDefault(); err.textContent = '';
       try { await api('/family', { method: 'POST', body: { name: e.target.name.value } }); await KF.boot(); } catch (ex) { err.textContent = ex.message; } };
     $('[data-out]', el).onclick = async e => { e.preventDefault(); await KF.logout(); };

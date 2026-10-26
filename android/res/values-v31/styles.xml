@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Android 12+ draws its own start screen; keep it black so there is no white flash. -->
+    <style name="Theme.Launcher" parent="@android:style/Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@drawable/splash</item>
+        <item name="android:statusBarColor">@color/black</item>
+        <item name="android:navigationBarColor">@color/black</item>
+        <item name="android:colorBackground">@color/black</item>
+        <item name="android:windowSplashScreenBackground">@color/black</item>
+    </style>
+</resources>
