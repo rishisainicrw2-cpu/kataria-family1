@@ -20,26 +20,37 @@ The APK is signed with a private key (`hinduesports.p12`) that is **not** stored
 its password safe: only an APK signed with the same key can update an installed app. If the key is lost, make a new
 one, add its fingerprint to `ANDROID_SHA256` (comma separated), and ask members to reinstall.
 
-## Rebuilding (only needed to change the app name, icon or address)
+## Rebuilding (only needed to change the app name, icon, address or launcher code)
 
-Needs a JDK, an Android SDK platform (`android.jar`, API 34), `aapt2`, a dex compiler (`d8` or `dx`) and the
+`./build.sh` does everything in one go and writes `build/hindu-esports.apk` (signed, checked). It needs a JDK, an
+Android SDK platform (`android.jar`, API 34), `aapt2`, a dex compiler (the old `dx` here, `d8` works too), the
 [apksig](https://android.googlesource.com/platform/tools/apksig/) library (`tools/SignApk.java` is a small command line
-wrapper around it).
+wrapper around it) and the private key. Where those live is set with environment variables at the top of `build.sh`
+(`AAPT2`, `ANDROID_JAR`, `DX_CP`, `SIGN_CP`, `KEYSTORE`, `KEY_ALIAS`, `KEY_PASS` or `KEY_PASS_FILE`).
 
 ```sh
-python3 tools/make_icons.py ../public/assets res                 # icons from the website logo
-javac -source 8 -target 8 -bootclasspath android.jar -d build/classes src/com/hinduesports/clan/LauncherActivity.java
-d8 --release --min-api 24 --lib android.jar --output build build/classes/com/hinduesports/clan/*.class   # -> build/classes.dex
-aapt2 compile --dir res -o build/compiled
-aapt2 link -o build/resources.apk -I android.jar --manifest AndroidManifest.xml \
-     --min-sdk-version 24 --target-sdk-version 34 --version-code 1 --version-name 1.0 build/compiled/*.flat
-python3 tools/assemble.py build/resources.apk build/classes.dex build/app-unsigned.apk   # adds classes.dex, 4-byte alignment
-java -cp <apksig+SignApk> SignApk sign build/app-unsigned.apk build/app-signed.apk hinduesports.p12 hinduesports <password> 24
-java -cp <apksig+SignApk> SignApk verify build/app-signed.apk
-python3 tools/checkzip.py build/app-signed.apk
-cp build/app-signed.apk ../public/hindu-esports.apk
+VERSION_CODE=3 VERSION_NAME=1.2 ./build.sh     # raise VERSION_CODE every time a new APK must replace an installed one
+cp build/hindu-esports.apk ../public/hindu-esports.apk
 ```
 
-Raise `--version-code` every time a new APK should replace an installed one.
+Steps inside the script: icons from the website logo (`tools/make_icons.py`) -> `javac` -> `dx` -> `aapt2 compile/link` ->
+`tools/assemble.py` (adds `classes.dex`, 4-byte alignment) -> `SignApk sign` (v1+v2+v3) -> `SignApk verify` and
+`tools/checkzip.py`.
+
 Change the address in `LauncherActivity.java` (`START_URL`, `SITE_HOST`) **and** in `AndroidManifest.xml`
 (the `android:host` of the second intent filter) if the website ever moves to another domain.
+
+## Do not "tidy" the TX_* numbers in LauncherActivity.java
+
+The launcher talks to Chrome's Custom Tabs service by hand. A call is sent as `IBinder.FIRST_CALL_TRANSACTION` (1) plus
+the number written next to the method in Google's `ICustomTabsService.aidl` / `ICustomTabsCallback.aidl`
+(`warmup = 1`, `newSession = 2`, `extraCallbackWithResult = 6`), i.e. 2, 3 and 7 on the wire. Version 1.0 sent 1, 2 and 6 and
+asked Chrome for different calls than intended, so it could not set up the full-screen session properly (at best the site
+opened with a browser bar). Fixed in 1.1.
+
+## Versions
+
+| versionName | versionCode | change |
+|---|---|---|
+| 1.0 | 1 | first release (could not start the full-screen session, see above) |
+| 1.1 | 2 | correct Chrome call numbers; waits up to 10 s for Chrome to wake up before using the fallback |

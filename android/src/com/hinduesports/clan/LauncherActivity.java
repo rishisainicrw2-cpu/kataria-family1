@@ -54,9 +54,13 @@ public class LauncherActivity extends Activity {
             "androidx.browser.trusted.category.TrustedWebActivities";
     private static final String DESCRIPTOR_SERVICE = "android.support.customtabs.ICustomTabsService";
     private static final String DESCRIPTOR_CALLBACK = "android.support.customtabs.ICustomTabsCallback";
-    private static final int TX_WARMUP = 1;                 // boolean warmup(long flags)
-    private static final int TX_NEW_SESSION = 2;            // boolean newSession(ICustomTabsCallback)
-    private static final int TX_CALLBACK_EXTRA_WITH_RESULT = 6; // Bundle extraCallbackWithResult(..)
+    // The .aidl files number their methods (ICustomTabsService: warmup = 1, newSession = 2;
+    // ICustomTabsCallback: extraCallbackWithResult = 6).  On the wire every call is sent with the
+    // code IBinder.FIRST_CALL_TRANSACTION (= 1) + that number, which is what the AIDL compiler
+    // writes into the generated TRANSACTION_* constants on both sides.
+    private static final int TX_WARMUP = IBinder.FIRST_CALL_TRANSACTION + 1;       // boolean warmup(long)
+    private static final int TX_NEW_SESSION = IBinder.FIRST_CALL_TRANSACTION + 2;  // boolean newSession(cb)
+    private static final int TX_CALLBACK_EXTRA_WITH_RESULT = IBinder.FIRST_CALL_TRANSACTION + 6;
     private static final String EXTRA_SESSION = "android.support.customtabs.extra.SESSION";
     private static final String EXTRA_LAUNCH_AS_TWA =
             "android.support.customtabs.extra.LAUNCH_AS_TRUSTED_WEB_ACTIVITY";
@@ -68,14 +72,14 @@ public class LauncherActivity extends Activity {
     private static final String EXTRA_SHARE_STATE = "androidx.browser.customtabs.extra.SHARE_STATE";
 
     private static final String KEY_LAUNCHED = "hindu.esports.launched";
-    private static final long CONNECT_TIMEOUT_MS = 3500;
+    private static final long CONNECT_TIMEOUT_MS = 10000; // slow phones need a few seconds to wake Chrome up
 
     private static final int MODE_TRUSTED_WEB_ACTIVITY = 0;
     private static final int MODE_CUSTOM_TAB = 1;
     private static final int MODE_BROWSER = 2;
 
     private final Handler handler = new Handler(Looper.getMainLooper());
-    private Uri url;
+    private Uri url = Uri.parse(START_URL);
     private int mode = MODE_BROWSER;
     private String provider;
     private boolean bound;
