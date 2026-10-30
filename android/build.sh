@@ -22,8 +22,8 @@ KEYSTORE=${KEYSTORE:-$TOOLS/keys-h/hinduesports.p12}
 KEY_ALIAS=${KEY_ALIAS:-hinduesports}
 KEY_PASS_FILE=${KEY_PASS_FILE:-$TOOLS/keys-h/password.txt}
 KEY_PASS=${KEY_PASS:-$(cat "$KEY_PASS_FILE")}
-VERSION_CODE=${VERSION_CODE:-2}
-VERSION_NAME=${VERSION_NAME:-1.1}
+VERSION_CODE=${VERSION_CODE:-3}
+VERSION_NAME=${VERSION_NAME:-1.2}
 QUIET='^Picked up'
 
 rm -rf build && mkdir -p build/classes build/flat
@@ -32,11 +32,17 @@ echo "== 1. icons from the website logo + resources copy"
 cp -r res build/res
 python3 -I tools/make_icons.py ../public/assets build/res
 
-echo "== 2. compile Java"
-javac -nowarn -Xlint:-options -source 8 -target 8 -bootclasspath "$ANDROID_JAR" -d build/classes \
-  src/com/hinduesports/clan/LauncherActivity.java 2>&1 | { grep -v "$QUIET" || true; }
+echo "== 2. check the 'wait for the sleeping server to wake up' logic on plain Java first (no phone needed)"
+mkdir -p build/wake-test
+javac -nowarn -d build/wake-test \
+  src/com/hinduesports/clan/ServerWake.java test/com/hinduesports/clan/WakeTest.java 2>&1 | { grep -v "$QUIET" || true; }
+java -cp build/wake-test com.hinduesports.clan.WakeTest
 
-echo "== 3. class files -> classes.dex (the old dx tool only reads class-file version <= 50)"
+echo "== 3. compile Java (for the phone)"
+javac -nowarn -Xlint:-options -source 8 -target 8 -bootclasspath "$ANDROID_JAR" -d build/classes \
+  src/com/hinduesports/clan/LauncherActivity.java src/com/hinduesports/clan/ServerWake.java 2>&1 | { grep -v "$QUIET" || true; }
+
+echo "== 4. class files -> classes.dex (the old dx tool only reads class-file version <= 50)"
 python3 -I - <<'EOF'
 import os, struct
 for root, _, files in os.walk('build/classes'):
@@ -50,16 +56,16 @@ EOF
 java -cp "$DX_CP" com.android.dx.command.Main --dex --output=build/classes.dex build/classes 2>&1 | { grep -v "$QUIET" || true; }
 test -s build/classes.dex
 
-echo "== 4. resources + manifest (aapt2)"
+echo "== 5. resources + manifest (aapt2)"
 "$AAPT2" compile --dir build/res -o build/flat
 "$AAPT2" link -o build/resources.apk -I "$ANDROID_JAR" --manifest AndroidManifest.xml \
   --min-sdk-version 24 --target-sdk-version 34 --version-code "$VERSION_CODE" --version-name "$VERSION_NAME" \
   --compile-sdk-version-code 34 --compile-sdk-version-name 14 build/flat/*.flat
 
-echo "== 5. add classes.dex + 4-byte alignment"
+echo "== 6. add classes.dex + 4-byte alignment"
 python3 -I tools/assemble.py build/resources.apk build/classes.dex build/app-unsigned.apk
 
-echo "== 6. sign (v1 + v2 + v3) and verify"
+echo "== 7. sign (v1 + v2 + v3) and verify"
 java -cp "$SIGN_CP" SignApk sign build/app-unsigned.apk build/hindu-esports.apk "$KEYSTORE" "$KEY_ALIAS" "$KEY_PASS" 24 2>&1 | { grep -v "$QUIET" || true; }
 java -cp "$SIGN_CP" SignApk verify build/hindu-esports.apk 2>&1 | { grep -v "$QUIET" || true; }
 "$AAPT2" dump badging build/hindu-esports.apk | head -3

@@ -48,9 +48,23 @@ the number written next to the method in Google's `ICustomTabsService.aidl` / `I
 asked Chrome for different calls than intended, so it could not set up the full-screen session properly (at best the site
 opened with a browser bar). Fixed in 1.1.
 
+## Waking up the site (`ServerWake.java`)
+
+The site runs on free hosting, which puts the server to sleep after a while; the first open after that can take up to
+about a minute. Rather than hand that wait to Chrome, `LauncherActivity` first asks the server for its own
+`manifest.webmanifest` in the background (`ServerWake.await`, on our own black screen with the clan's logo and a short
+status line) and only opens Chrome once the real site answers. That way nothing the hosting company might show while
+the server wakes up — an error page, an interim "spinning up" page — is ever put on screen; the person only ever sees
+the clan's own screen or the finished site. If there is no network at all, the app says so itself ("No internet
+connection") instead of opening Chrome to its offline page. `test/com/hinduesports/clan/WakeTest.java` checks this
+logic on a plain desktop JVM (awake already, a few 503s while waking, a host's own 200-status "waking up" page that
+must not be mistaken for the real site, a hung connection, no network, and cancelling); `build.sh` runs it before
+every build and refuses to build the APK if it fails.
+
 ## Versions
 
 | versionName | versionCode | change |
 |---|---|---|
 | 1.0 | 1 | first release (could not start the full-screen session, see above) |
 | 1.1 | 2 | correct Chrome call numbers; waits up to 10 s for Chrome to wake up before using the fallback |
+| 1.2 | 3 | waits for the sleeping server to wake up on its own screen before opening Chrome at all (see above) |

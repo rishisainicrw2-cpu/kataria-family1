@@ -17,6 +17,12 @@ import android.os.Looper;
 import android.os.Parcel;
 import android.os.RemoteException;
 import android.util.Log;
+import android.util.TypedValue;
+import android.view.Gravity;
+import android.view.ViewGroup;
+import android.widget.FrameLayout;
+import android.widget.ProgressBar;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import java.util.ArrayList;
@@ -38,6 +44,12 @@ import java.util.Map;
  * The page is shown without browser bars only if the site vouches for this app through
  * https://hindu-esports.onrender.com/.well-known/assetlinks.json (package name + signing key).  If that
  * check, or Chrome itself, is not available, the site still opens (with a small bar, or in the browser).
+ *
+ * The site is on free hosting, which puts the server to sleep after a while; the first open after that can
+ * take up to about a minute to wake up. Rather than hand that wait to Chrome (which could show the host's own
+ * "waking up" or error page before the site is ready), this screen quietly asks the server for a small file of
+ * its own first ({@link ServerWake}) and only opens Chrome once the real site answers — so the clan's own black
+ * screen with its logo is all that is ever shown while waiting, never anything from the hosting company.
  */
 public class LauncherActivity extends Activity {
     private static final String TAG = "HinduEsports";
@@ -74,6 +86,16 @@ public class LauncherActivity extends Activity {
     private static final String KEY_LAUNCHED = "hindu.esports.launched";
     private static final long CONNECT_TIMEOUT_MS = 10000; // slow phones need a few seconds to wake Chrome up
 
+    // Free hosting: the server sleeps when nobody has used it for a while, and the first request after that
+    // can take up to about a minute to wake it. We wait for it ourselves (on our own black screen) rather
+    // than let Chrome show whatever the host displays while it is starting up.
+    private static final String WAKE_CHECK_URL = START_URL + "manifest.webmanifest";
+    private static final long WAKE_TOTAL_MS = 55000;
+    private static final int WAKE_CONNECT_MS = 6000;
+    private static final int WAKE_READ_MS = 6000;
+    private static final long WAKE_RETRY_MS = 1200;
+    private static final long WAKE_SCREEN_GRACE_MS = 900; // do not flash the "waking up" text on fast opens
+
     private static final int MODE_TRUSTED_WEB_ACTIVITY = 0;
     private static final int MODE_CUSTOM_TAB = 1;
     private static final int MODE_BROWSER = 2;
@@ -84,7 +106,9 @@ public class LauncherActivity extends Activity {
     private String provider;
     private boolean bound;
     private boolean launched;
+    private boolean cancelled;
     private SessionCallback callback;
+    private TextView waitText;
 
     // ------------------------------------------------------------------------------------------
     @Override
@@ -96,6 +120,68 @@ public class LauncherActivity extends Activity {
         }
         try {
             url = chooseUrl(getIntent());
+            startWaking();
+        } catch (RuntimeException e) {
+            Log.w(TAG, "Could not start the app view", e);
+            openFallback();
+        }
+    }
+
+    // ---- waiting for the site to wake up, on our own screen -----------------------------------------
+    private void startWaking() {
+        final Handler bg = new Handler(Looper.getMainLooper()); // posts back from the waiting thread below
+        handler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                if (!launched && !cancelled) showWaitScreen();
+            }
+        }, WAKE_SCREEN_GRACE_MS);
+
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                final int result;
+                try {
+                    result = ServerWake.await(WAKE_CHECK_URL, WAKE_TOTAL_MS, WAKE_CONNECT_MS, WAKE_READ_MS,
+                            WAKE_RETRY_MS, new ServerWake.Cancel() {
+                                @Override
+                                public boolean isCancelled() {
+                                    return cancelled || isFinishing();
+                                }
+                            });
+                } catch (RuntimeException e) {
+                    bg.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            onWakeDone(ServerWake.UNSURE);
+                        }
+                    });
+                    return;
+                }
+                bg.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        onWakeDone(result);
+                    }
+                });
+            }
+        }, "hindu-esports-wake").start();
+    }
+
+    private void onWakeDone(int result) {
+        if (cancelled || isFinishing()) return;
+        handler.removeCallbacksAndMessages(null);
+        if (result == ServerWake.OFFLINE) {
+            showOfflineScreen();
+            return;
+        }
+        // READY, TIMED_OUT (the server is probably awake by now anyway) and UNSURE: open the site.
+        hideWaitScreen();
+        openSite();
+    }
+
+    private void openSite() {
+        try {
             pickProvider();
             if (mode == MODE_TRUSTED_WEB_ACTIVITY && provider != null && connect()) {
                 handler.postDelayed(new Runnable() {
@@ -116,6 +202,68 @@ public class LauncherActivity extends Activity {
         }
     }
 
+    /** A small status line under the logo that is already on screen (the theme's black splash). */
+    private void showWaitScreen() {
+        if (waitText != null) return;
+        FrameLayout root = new FrameLayout(this);
+        TextView t = new TextView(this);
+        t.setText("Waking up the clan server…\nFree hosting — this can take up to a minute");
+        t.setTextColor(0xFFFFD9BF);
+        t.setGravity(Gravity.CENTER);
+        t.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        t.setLineSpacing(4, 1f);
+        FrameLayout.LayoutParams tp = new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        tp.gravity = Gravity.CENTER_HORIZONTAL | Gravity.BOTTOM;
+        tp.bottomMargin = dp(96);
+        tp.leftMargin = dp(32);
+        tp.rightMargin = dp(32);
+        root.addView(t, tp);
+
+        ProgressBar spinner = new ProgressBar(this);
+        FrameLayout.LayoutParams sp = new FrameLayout.LayoutParams(dp(28), dp(28));
+        sp.gravity = Gravity.CENTER_HORIZONTAL | Gravity.BOTTOM;
+        sp.bottomMargin = dp(64);
+        root.addView(spinner, sp);
+
+        setContentView(root);
+        waitText = t;
+    }
+
+    private void hideWaitScreen() {
+        waitText = null;
+    }
+
+    /** No network at all: do not hand this to Chrome (it would show its own offline page). Let the person retry. */
+    private void showOfflineScreen() {
+        FrameLayout root = new FrameLayout(this);
+        TextView t = new TextView(this);
+        t.setText("No internet connection.\nTap anywhere to try again.");
+        t.setTextColor(0xFFFFD9BF);
+        t.setGravity(Gravity.CENTER);
+        t.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+        t.setLineSpacing(4, 1f);
+        FrameLayout.LayoutParams tp = new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        tp.gravity = Gravity.CENTER;
+        tp.leftMargin = dp(32);
+        tp.rightMargin = dp(32);
+        root.addView(t, tp);
+        root.setOnClickListener(new android.view.View.OnClickListener() {
+            @Override
+            public void onClick(android.view.View v) {
+                waitText = null;
+                startWaking();
+            }
+        });
+        setContentView(root);
+        waitText = t;
+    }
+
+    private int dp(int v) {
+        return (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, v, getResources().getDisplayMetrics());
+    }
+
     @Override
     protected void onSaveInstanceState(Bundle out) {
         super.onSaveInstanceState(out);
@@ -131,6 +279,7 @@ public class LauncherActivity extends Activity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        cancelled = true;
         handler.removeCallbacksAndMessages(null);
         disconnect();
     }

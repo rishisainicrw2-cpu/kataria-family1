@@ -42,9 +42,29 @@ async function refreshFamily() {
 }
 KF.refreshFamily = refreshFamily;
 
+/* Free hosting puts the server to sleep after a while; the first open after that can take up to a minute to
+   answer. Instead of showing whatever error or blank screen that produces, keep trying quietly on the app's
+   own boot screen and only speak up — in the app's own words — if it is taking a while. */
+async function wakeServer() {
+  const started = Date.now(), totalMs = 55000, retryMs = 1300;
+  let said = false;
+  while (true) {
+    try { return await api('/me'); }
+    catch (e) {
+      if (e.status === 401 || Date.now() - started > totalMs) throw e;
+      if (!said && Date.now() - started > 1200) {
+        said = true;
+        $('#boot').insertAdjacentHTML('beforeend',
+          '<p class="center small" style="color:#ffd9bf;opacity:.85;margin-top:14px">Waking up the clan server…<br>Free hosting — this can take up to a minute</p>');
+      }
+      await new Promise(r => setTimeout(r, retryMs));
+    }
+  }
+}
+
 async function boot() {
   try {
-    const me = await api('/me');
+    const me = await wakeServer();
     KF.state.canCreateClan = !!me.canCreateClan;
     KF.state.me = me.user;
     if (!me.family) { applyTheme(); KF.showAuth('family'); return; }
@@ -58,7 +78,12 @@ async function boot() {
     setTimeout(askAlerts, 1800);
   } catch (e) {
     if (e.status === 401) { applyTheme(); KF.showAuth('welcome'); }
-    else { $('#boot').innerHTML += `<p class="center" style="color:#ffb3bd">${esc(e.message)}<br><button class="btn gold" onclick="location.reload()" style="margin-top:12px">Retry</button></p>`; $('#boot .spinner')?.remove(); }
+    else {
+      const msg = (e.offline || !e.status || e.status >= 500)
+        ? 'The clan server is taking longer than usual to wake up.' : esc(e.message);
+      $('#boot').innerHTML += `<p class="center" style="color:#ffb3bd">${msg}<br><button class="btn gold" onclick="location.reload()" style="margin-top:12px">Retry</button></p>`;
+      $('#boot .spinner')?.remove();
+    }
   }
 }
 KF.boot = boot;
