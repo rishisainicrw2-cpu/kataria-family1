@@ -89,7 +89,7 @@ label{display:block;font-size:.83rem;color:var(--muted);margin:10px 0 4px}
 /* auth / splash */
 .screen{position:fixed;inset:0;z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;
   background:linear-gradient(160deg,var(--blue-d),var(--ink));color:#fff;padding:24px;overflow-y:auto}
-.screen .logo{width:104px;height:104px;border-radius:26px;box-shadow:0 10px 40px rgba(242,106,15,.5)}
+.screen .logo{width:104px;height:104px;border-radius:26px;box-shadow:0 10px 40px rgba(242,106,15,.5);object-fit:cover;overflow:hidden;background:#000}
 .screen h1{font-size:1.9rem;letter-spacing:2px;margin-top:16px;color:#fff} .screen h1 span{color:var(--gold)}
 .screen .tag{color:var(--gold-l);font-style:italic;margin:6px 0 24px}
 .screen .panel{width:100%;max-width:400px;background:rgba(255,255,255,.07);backdrop-filter:blur(8px);border-radius:22px;padding:20px;

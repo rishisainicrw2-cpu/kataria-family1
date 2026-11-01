@@ -15,15 +15,18 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.Parcel;
+import android.media.MediaPlayer;
 import android.os.RemoteException;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
+import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.widget.VideoView;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -109,6 +112,7 @@ public class LauncherActivity extends Activity {
     private boolean cancelled;
     private SessionCallback callback;
     private TextView waitText;
+    private VideoView waitVideo;
 
     // ------------------------------------------------------------------------------------------
     @Override
@@ -202,29 +206,61 @@ public class LauncherActivity extends Activity {
         }
     }
 
-    /** A small status line under the logo that is already on screen (the theme's black splash). */
+    /** The clan's own logo reveal animation (muted, looping), with a short status line underneath. Replaces the
+     *  theme's still splash once shown, so there is only ever one thing on screen while we wait. */
     private void showWaitScreen() {
         if (waitText != null) return;
-        FrameLayout root = new FrameLayout(this);
+        LinearLayout col = new LinearLayout(this);
+        col.setOrientation(LinearLayout.VERTICAL);
+        col.setGravity(Gravity.CENTER_HORIZONTAL);
+
+        VideoView video = new VideoView(this);
+        try {
+            video.setVideoURI(Uri.parse("android.resource://" + getPackageName() + "/raw/wake"));
+            video.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
+                @Override
+                public void onPrepared(MediaPlayer mp) {
+                    mp.setLooping(true);
+                    mp.setVolume(0f, 0f); // this screen is silent; only the status text speaks
+                }
+            });
+            video.setOnErrorListener(new MediaPlayer.OnErrorListener() {
+                @Override
+                public boolean onError(MediaPlayer mp, int what, int extra) {
+                    return true; // swallow: the status text below still shows even if the clip can't play
+                }
+            });
+            video.start();
+            col.addView(video, new LinearLayout.LayoutParams(dp(176), dp(176)));
+            waitVideo = video;
+        } catch (RuntimeException e) {
+            Log.w(TAG, "Could not play the wake animation", e);
+        }
+
+        ProgressBar spinner = new ProgressBar(this);
+        LinearLayout.LayoutParams sp = new LinearLayout.LayoutParams(dp(28), dp(28));
+        sp.topMargin = dp(18);
+        col.addView(spinner, sp);
+
         TextView t = new TextView(this);
         t.setText("Waking up the clan server…\nFree hosting — this can take up to a minute");
         t.setTextColor(0xFFFFD9BF);
         t.setGravity(Gravity.CENTER);
         t.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
         t.setLineSpacing(4, 1f);
-        FrameLayout.LayoutParams tp = new FrameLayout.LayoutParams(
+        LinearLayout.LayoutParams tp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        tp.gravity = Gravity.CENTER_HORIZONTAL | Gravity.BOTTOM;
-        tp.bottomMargin = dp(96);
-        tp.leftMargin = dp(32);
-        tp.rightMargin = dp(32);
-        root.addView(t, tp);
+        tp.topMargin = dp(14);
+        col.addView(t, tp);
 
-        ProgressBar spinner = new ProgressBar(this);
-        FrameLayout.LayoutParams sp = new FrameLayout.LayoutParams(dp(28), dp(28));
-        sp.gravity = Gravity.CENTER_HORIZONTAL | Gravity.BOTTOM;
-        sp.bottomMargin = dp(64);
-        root.addView(spinner, sp);
+        FrameLayout root = new FrameLayout(this);
+        root.setBackgroundColor(0xFF000000);
+        FrameLayout.LayoutParams cp = new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        cp.gravity = Gravity.CENTER;
+        cp.leftMargin = dp(32);
+        cp.rightMargin = dp(32);
+        root.addView(col, cp);
 
         setContentView(root);
         waitText = t;
@@ -232,6 +268,14 @@ public class LauncherActivity extends Activity {
 
     private void hideWaitScreen() {
         waitText = null;
+        if (waitVideo != null) {
+            try {
+                waitVideo.stopPlayback();
+            } catch (RuntimeException e) {
+                // ignore
+            }
+            waitVideo = null;
+        }
     }
 
     /** No network at all: do not hand this to Chrome (it would show its own offline page). Let the person retry. */
@@ -281,6 +325,7 @@ public class LauncherActivity extends Activity {
         super.onDestroy();
         cancelled = true;
         handler.removeCallbacksAndMessages(null);
+        hideWaitScreen();
         disconnect();
     }
 

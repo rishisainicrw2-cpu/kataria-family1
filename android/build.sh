@@ -22,8 +22,8 @@ KEYSTORE=${KEYSTORE:-$TOOLS/keys-h/hinduesports.p12}
 KEY_ALIAS=${KEY_ALIAS:-hinduesports}
 KEY_PASS_FILE=${KEY_PASS_FILE:-$TOOLS/keys-h/password.txt}
 KEY_PASS=${KEY_PASS:-$(cat "$KEY_PASS_FILE")}
-VERSION_CODE=${VERSION_CODE:-3}
-VERSION_NAME=${VERSION_NAME:-1.2}
+VERSION_CODE=${VERSION_CODE:-4}
+VERSION_NAME=${VERSION_NAME:-1.3}
 QUIET='^Picked up'
 
 rm -rf build && mkdir -p build/classes build/flat

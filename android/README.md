@@ -29,7 +29,7 @@ wrapper around it) and the private key. Where those live is set with environment
 (`AAPT2`, `ANDROID_JAR`, `DX_CP`, `SIGN_CP`, `KEYSTORE`, `KEY_ALIAS`, `KEY_PASS` or `KEY_PASS_FILE`).
 
 ```sh
-VERSION_CODE=3 VERSION_NAME=1.2 ./build.sh     # raise VERSION_CODE every time a new APK must replace an installed one
+VERSION_CODE=4 VERSION_NAME=1.3 ./build.sh     # raise VERSION_CODE every time a new APK must replace an installed one
 cp build/hindu-esports.apk ../public/hindu-esports.apk
 ```
 
@@ -68,3 +68,4 @@ every build and refuses to build the APK if it fails.
 | 1.0 | 1 | first release (could not start the full-screen session, see above) |
 | 1.1 | 2 | correct Chrome call numbers; waits up to 10 s for Chrome to wake up before using the fallback |
 | 1.2 | 3 | waits for the sleeping server to wake up on its own screen before opening Chrome at all (see above) |
+| 1.3 | 4 | the waiting screen plays the clan's logo reveal animation (`res/raw/wake.mp4`, muted, looping) instead of a plain spinner |

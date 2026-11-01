@@ -1,8 +1,8 @@
 // HINDU ESPORTS service worker: caches the app shell only. API/WebSocket/Drive files are never cached,
 // so private clan data is not stored by the service worker.
-const CACHE = 'hindu-esports-shell-v2';
+const CACHE = 'hindu-esports-shell-v3';
 const SHELL = ['/', '/styles.css', '/js/core.js', '/js/views.js', '/js/chat.js', '/js/features.js', '/js/features2.js', '/js/app.js',
-  '/assets/icon-192.png', '/assets/icon-512.png', '/assets/logo.png', '/manifest.webmanifest'];
+  '/assets/icon-192.png', '/assets/icon-512.png', '/assets/logo.png', '/manifest.webmanifest', '/assets/wake.mp4'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim()));

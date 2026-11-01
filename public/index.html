@@ -14,11 +14,22 @@
 </head>
 <body>
 <div id="boot" class="screen">
-  <img class="logo" src="/assets/icon-512.png" alt="Hindu Esports">
+  <video class="logo" id="bootVideo" src="/assets/wake.mp4" poster="/assets/icon-512.png"
+    autoplay muted loop playsinline webkit-playsinline="true" disablepictureinpicture preload="auto"></video>
+  <img class="logo hidden" id="bootImg" src="/assets/icon-512.png" alt="Hindu Esports">
   <h1 class="sr">HINDU ESPORTS</h1>
   <div class="tag">Together as One ✦</div>
   <div class="spinner" aria-label="Loading"></div>
 </div>
+<script>
+// A few older/locked-down browsers refuse to autoplay even a muted video; fall back to the plain logo quietly.
+(function () { var v = document.getElementById('bootVideo');
+  if (!v) return;
+  var toImg = function () { v.classList.add('hidden'); var i = document.getElementById('bootImg'); if (i) i.classList.remove('hidden'); };
+  v.addEventListener('error', toImg);
+  var p = v.play(); if (p && p.catch) p.catch(toImg);
+})();
+</script>
 <div id="auth" class="screen hidden"></div>
 <div id="app" class="hidden">
   <div id="offline" class="offline hidden">You are offline — messages will send when you reconnect</div>
