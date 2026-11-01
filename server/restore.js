@@ -42,7 +42,30 @@ async function call(url, opts, what) {
   throw new Error(`${what}: ${last && last.message}`);
 }
 
+// TEMPORARY emergency bootstrap (2026-11-01): DRIVE_RESTORE_KEY's Google refresh token expired (OAuth app was
+// still in "Testing" mode) and the host's disk is wiped on every restart, so the server could no longer start at
+// all. This restores from a backup bundled directly in the repo (still encrypted with SECRET_KEY, same as any
+// Drive backup) so the server can boot without needing Google at all. Remove server/emergency-seed.kfb and this
+// block once Drive is reconnected with a fresh token and DRIVE_RESTORE_KEY is updated on the host.
+const path = require('path');
+const SEED_FILE = path.join(__dirname, 'emergency-seed.kfb');
+function restoreFromLocalSeed(log) {
+  if (!fs.existsSync(SEED_FILE)) return false;
+  log('[restore] local database is empty — restoring from the bundled emergency seed…');
+  const bytes = zlib.gunzipSync(openBytes(fs.readFileSync(SEED_FILE)));
+  const tmp = cfg.DB_FILE + '.restoring';
+  fs.writeFileSync(tmp, bytes);
+  if (!dbHasUsers(tmp)) throw new Fatal('emergency-seed.kfb contains no users');
+  const chk = new DatabaseSync(tmp, { readOnly: true }); const ic = chk.prepare('PRAGMA integrity_check').get(); chk.close();
+  if (Object.values(ic)[0] !== 'ok') throw new Fatal('emergency-seed.kfb failed integrity check');
+  for (const ext of ['', '-wal', '-shm']) fs.rmSync(cfg.DB_FILE + ext, { force: true });
+  fs.renameSync(tmp, cfg.DB_FILE);
+  log('[restore] restored database from the bundled emergency seed (server/emergency-seed.kfb)');
+  return true;
+}
+
 async function restoreIfNeeded(log = console.log) {
+  if (!dbHasUsers(cfg.DB_FILE) && restoreFromLocalSeed(log)) return 'restored:emergency-seed';
   const keyEnv = (process.env.DRIVE_RESTORE_KEY || '').trim();
   if (!keyEnv) return 'no-restore-key';
   if (dbHasUsers(cfg.DB_FILE)) return 'database-already-has-data';
