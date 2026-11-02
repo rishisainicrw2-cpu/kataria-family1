@@ -11,6 +11,17 @@ KF.views.profile = async view => {
   view.innerHTML = `<div class="gap fade">
     <div class="card center">${avatar(me, '')}<h2 style="margin-top:8px">${esc(me.name)}</h2><div class="small muted">${esc(me.email)}</div>${gameIds(me)}<div style="margin-top:6px"><span class="pill gold">${rankOf(me).icon} ${rankOf(me).label}</span> <span class="pill">${esc(f.name)}</span></div>
       <div class="row" style="justify-content:center;margin-top:12px"><button class="btn small ghost" data-name>Edit profile</button><button class="btn small ghost" data-photo>Change photo</button></div></div>
+    <div class="card">
+      <h3>Payment info (UPI)</h3>
+      <div class="small muted" style="margin-bottom:8px">Shown to clan members when they owe you money for a shared expense, so they can pay you back directly.</div>
+      ${me.upiId ? `<div class="small" style="margin-bottom:6px"><span data-copy="${esc(me.upiId)}" style="cursor:pointer">💳 <b>${esc(me.upiId)}</b></span></div>` : '<div class="small muted" style="margin-bottom:6px">No UPI ID set yet.</div>'}
+      ${me.hasUpiQr ? `<img src="/api/users/${me.id}/upi-qr?v=${me.upiQrV || 0}" alt="Your UPI QR code" style="width:160px;height:160px;object-fit:contain;border-radius:12px;background:#fff;padding:8px;display:block;margin-bottom:10px">` : ''}
+      <div class="row">
+        <button class="btn small ghost" data-upi>${me.upiId ? 'Edit UPI ID' : 'Add UPI ID'}</button>
+        <button class="btn small ghost" data-upi-qr>${me.hasUpiQr ? 'Change QR code' : 'Add QR code'}</button>
+        ${me.hasUpiQr ? '<button class="btn small ghost" data-upi-qr-del>Remove QR</button>' : ''}
+      </div>
+    </div>
     <div class="card list">
       ${link('#/shopping', 'cart', 'Shopping lists')}${link('#/expenses', 'money', 'Clan funds', 'Private')}${link('#/memories', 'photo', 'Memories & albums')}${link('#/polls', 'poll', 'Polls & voting')}${link('#/events', 'cal', 'Clan events')}${link('#/files', 'folder', 'File manager', 'Files stored in Google Drive')}</div>
     <div class="card list">
@@ -21,6 +32,9 @@ KF.views.profile = async view => {
   wireCopy(view);
   $('[data-name]', view).onclick = async () => { const v = await formSheet('Your profile', [{ name: 'name', label: 'Display name', value: me.name, required: true }, { name: 'bgmiUid', label: 'BGMI UID (optional)', value: me.bgmiUid || '' }, { name: 'ffUid', label: 'Free Fire ID (optional)', value: me.ffUid || '' }]); if (v) try { const u = await api('/me', { method: 'PATCH', body: v }); Object.assign(KF.state.me, u); await KF.refreshFamily(); route(); } catch (e) { toast(e.message); } };
   $('[data-photo]', view).onclick = async () => { const [file] = await pickFile('image/*'); if (!file) return; try { toast('Updating your photo…', 15000); const small = await shrinkImage(file); const fd = new FormData(); fd.append('file', small); const u = await api('/me/photo', { method: 'POST', body: fd }); Object.assign(KF.state.me, u); await KF.refreshFamily(); route(); toast('Profile photo updated'); } catch (e) { toast(e.message, 6000); } };
+  $('[data-upi]', view).onclick = async () => { const v = await formSheet('Your UPI ID', [{ name: 'upiId', label: 'UPI ID (e.g. name@bank)', value: me.upiId || '' }]); if (v) try { const u = await api('/me', { method: 'PATCH', body: v }); Object.assign(KF.state.me, u); await KF.refreshFamily(); route(); toast('UPI ID saved'); } catch (e) { toast(e.message); } };
+  $('[data-upi-qr]', view).onclick = async () => { const [file] = await pickFile('image/*'); if (!file) return; try { toast('Updating your QR code…', 15000); const small = await shrinkImage(file); const fd = new FormData(); fd.append('file', small); const u = await api('/me/upi-qr', { method: 'POST', body: fd }); Object.assign(KF.state.me, u); await KF.refreshFamily(); route(); toast('QR code updated'); } catch (e) { toast(e.message, 6000); } };
+  $('[data-upi-qr-del]', view) && ($('[data-upi-qr-del]', view).onclick = async () => { if (!(await confirmSheet('Remove your UPI QR code?', 'Remove', true))) return; try { const u = await api('/me/upi-qr', { method: 'DELETE' }); Object.assign(KF.state.me, u); await KF.refreshFamily(); route(); } catch (e) { toast(e.message); } });
   $('[data-out]', view).onclick = () => KF.logout();
 };
 

@@ -147,6 +147,9 @@ CREATE INDEX IF NOT EXISTS ix_drive_extra_family ON drive_extra(family_id);
 if (!db.prepare('PRAGMA table_info(files)').all().some(c => c.name === 'drive_acct')) db.exec('ALTER TABLE files ADD COLUMN drive_acct TEXT');
 // Game IDs shown on a player's profile (BGMI UID, Free Fire ID). Optional text, digits only (checked in the API).
 for (const col of ['bgmi_uid', 'ff_uid']) if (!db.prepare('PRAGMA table_info(users)').all().some(c => c.name === col)) db.exec(`ALTER TABLE users ADD COLUMN ${col} TEXT`);
+// UPI payment info shown on a player's profile and on clan expense settlements, so members can pay each other back directly.
+for (const col of ['upi_id TEXT', 'upi_qr BLOB', 'upi_qr_mime TEXT', 'upi_qr_v INTEGER NOT NULL DEFAULT 0'])
+  if (!db.prepare('PRAGMA table_info(users)').all().some(c => c.name === col.split(' ')[0])) db.exec(`ALTER TABLE users ADD COLUMN ${col}`);
 // Elite = a recognised rank between Member and Co-Leader. It is a badge only: it gives no extra powers (role stays 'member').
 if (!db.prepare('PRAGMA table_info(memberships)').all().some(c => c.name === 'elite')) db.exec('ALTER TABLE memberships ADD COLUMN elite INTEGER NOT NULL DEFAULT 0');
 

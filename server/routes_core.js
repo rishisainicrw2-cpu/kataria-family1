@@ -15,7 +15,13 @@ const makeCode = () => { const b = crypto.randomBytes(8); let s = ''; for (let i
 const PERM_KEYS = ['plans', 'events', 'expenses', 'plans_manage', 'invite'];
 const DEFAULT_PERMS = { plans: true, events: true };
 
-const userDto = u => ({ id: u.id, name: u.name, email: u.email, hasPhoto: !!u.photoV, photoV: u.photoV, prefs: u.prefs, role: u.role, elite: !!u.elite, bgmiUid: u.bgmiUid || '', ffUid: u.ffUid || '' });
+const userDto = u => ({ id: u.id, name: u.name, email: u.email, hasPhoto: !!u.photoV, photoV: u.photoV, prefs: u.prefs, role: u.role, elite: !!u.elite, bgmiUid: u.bgmiUid || '', ffUid: u.ffUid || '', upiId: u.upiId || '', hasUpiQr: !!u.upiQrV, upiQrV: u.upiQrV });
+// Loose UPI VPA check: "name@bank" — not validated against a real bank, just shaped like a UPI ID. Empty clears it.
+function upiIdVal(v) {
+  const s = String(v ?? '').trim(); if (!s) return '';
+  if (!/^[a-zA-Z0-9.\-_]{2,100}@[a-zA-Z][a-zA-Z0-9.\-]{1,64}$/.test(s)) throw bad('That doesn\'t look like a UPI ID (it should look like name@bank).');
+  return s;
+}
 
 /* =============== AUTH =============== */
 route('POST', '/api/auth/register', async ctx => {
@@ -89,9 +95,10 @@ route('PATCH', '/api/me', ctx => {
   const name = b.name !== undefined ? L.str(b.name, { name: 'Name', required: true, max: 60 }) : ctx.user.name;
   const bgmiUid = b.bgmiUid !== undefined ? L.gameId(b.bgmiUid, 'BGMI UID') : ctx.user.bgmiUid;
   const ffUid = b.ffUid !== undefined ? L.gameId(b.ffUid, 'Free Fire ID') : ctx.user.ffUid;
-  q.run('UPDATE users SET name=?, bgmi_uid=?, ff_uid=? WHERE id=?', name, bgmiUid, ffUid, ctx.user.id);
+  const upiId = b.upiId !== undefined ? upiIdVal(b.upiId) : ctx.user.upiId;
+  q.run('UPDATE users SET name=?, bgmi_uid=?, ff_uid=?, upi_id=? WHERE id=?', name, bgmiUid, ffUid, upiId, ctx.user.id);
   if (ctx.user.familyId) ws.broadcastFamily(ctx.user.familyId, { type: 'family.changed' });
-  return userDto({ ...ctx.user, name, bgmiUid, ffUid });
+  return userDto({ ...ctx.user, name, bgmiUid, ffUid, upiId });
 });
 const PREF_BOOL = ['n_messages', 'n_private', 'n_mentions', 'n_plans', 'n_events', 'n_reminders', 'n_polls', 'n_tasks', 'n_announce'];
 route('PATCH', '/api/me/prefs', ctx => {
@@ -119,6 +126,28 @@ route('GET', '/api/users/:id/photo', ctx => {
   const u = q.get('SELECT photo,photo_mime FROM users WHERE id=?', ctx.params.id);
   if (!u?.photo) throw notFound();
   ctx.res.writeHead(200, { 'Content-Type': u.photo_mime, 'Cache-Control': 'private, max-age=86400' }); ctx.res.end(Buffer.from(u.photo)); ctx.handled = true;
+});
+// A personal UPI QR code (e.g. a PhonePe/GPay "Scan & Pay" image), shown to clan members on expense settlements so they can pay you back directly.
+route('POST', '/api/me/upi-qr', ctx => {
+  const f = ctx.file; if (!f) throw bad('Choose an image first.');
+  if (!IMG_TYPES.includes(f.mime)) throw bad('Please choose a JPG, PNG, WebP or GIF image.');
+  if (f.data.length > 2 * 1048576) throw bad('The QR code image must be under 2 MB.');
+  q.run('UPDATE users SET upi_qr=?, upi_qr_mime=?, upi_qr_v=upi_qr_v+1 WHERE id=?', f.data, f.mime, ctx.user.id);
+  if (ctx.user.familyId) ws.broadcastFamily(ctx.user.familyId, { type: 'family.changed' });
+  const u = q.get('SELECT upi_qr_v FROM users WHERE id=?', ctx.user.id);
+  return userDto({ ...ctx.user, upiQrV: u.upi_qr_v });
+});
+route('DELETE', '/api/me/upi-qr', ctx => {
+  // Reset (not increment) the version: hasUpiQr is derived from upiQrV being non-zero, so this must go back to 0.
+  q.run('UPDATE users SET upi_qr=NULL, upi_qr_mime=NULL, upi_qr_v=0 WHERE id=?', ctx.user.id);
+  if (ctx.user.familyId) ws.broadcastFamily(ctx.user.familyId, { type: 'family.changed' });
+  return userDto({ ...ctx.user, upiQrV: 0 });
+});
+route('GET', '/api/users/:id/upi-qr', ctx => {
+  if (ctx.params.id !== ctx.user.id && !(ctx.user.familyId && L.sameFamily(ctx.user, ctx.params.id))) throw notFound();
+  const u = q.get('SELECT upi_qr,upi_qr_mime FROM users WHERE id=?', ctx.params.id);
+  if (!u?.upi_qr) throw notFound();
+  ctx.res.writeHead(200, { 'Content-Type': u.upi_qr_mime, 'Cache-Control': 'private, max-age=86400' }); ctx.res.end(Buffer.from(u.upi_qr)); ctx.handled = true;
 });
 route('POST', '/api/me/password', async ctx => {
   const u = q.get('SELECT * FROM users WHERE id=?', ctx.user.id);

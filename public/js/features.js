@@ -208,11 +208,20 @@ KF.views.expenses = async view => {
       <div class="row"><input type="month" value="${month}" data-m></div>
       <div class="card" style="background:linear-gradient(135deg,var(--blue),var(--blue-d));color:#fff;border:0"><div class="small" style="opacity:.8">Total this month</div><h2 style="color:var(--gold-l);font-size:2rem">${money(d.total)}</h2><div class="small">${d.items.length} expense${d.items.length === 1 ? '' : 's'}</div></div>
       ${Object.keys(byCat).length ? `<div class="card"><h3>By category</h3>${Object.entries(byCat).sort((a, b) => b[1] - a[1]).map(([c, v]) => `<div class="small row"><span class="grow">${esc(c)}</span><span>${money(v)}</span></div><div class="bar" style="margin:3px 0 8px"><i style="width:${Math.round(100 * v / d.total)}%"></i></div>`).join('')}</div>` : ''}
-      <div class="card"><h3>Who owes whom</h3>${d.settlements.length ? d.settlements.map(s => `<div class="small" style="padding:4px 0"><b>${esc(member(s.from)?.name || '?')}</b> owes <b>${esc(member(s.to)?.name || '?')}</b> ${money(s.amount)}</div>`).join('') : '<div class="muted small">All settled up ✨</div>'}<div class="small muted" style="margin-top:6px">This only tracks shares. No payments are made by the app.</div></div>
+      <div class="card"><h3>Who owes whom</h3>${d.settlements.length ? d.settlements.map(s => { const to = member(s.to); return `<div class="row" style="padding:4px 0"><div class="grow small"><b>${esc(member(s.from)?.name || '?')}</b> owes <b>${esc(to?.name || '?')}</b> ${money(s.amount)}</div>${s.from === KF.state.me.id && to && (to.upiId || to.hasUpiQr) ? `<button class="btn small gold" data-pay="${to.id}" data-amt="${s.amount}">Pay</button>` : ''}</div>`; }).join('') : '<div class="muted small">All settled up ✨</div>'}<div class="small muted" style="margin-top:6px">This only tracks shares. No payments are made by the app.</div></div>
       <div class="card"><h3>History</h3>${d.items.length ? `<div class="list">${d.items.map(e => `<div class="row"><div class="grow"><b>${esc(e.title)}</b><div class="small muted">${fmtDate(e.date)} · ${esc(e.category)} · paid by ${esc(member(e.paidBy)?.name.split(' ')[0] || '?')} · split ${e.split.length}</div></div><b>${money(e.amount)}</b>${e.canDelete ? `<button class="icon-btn" data-del="${e.id}">🗑</button>` : ''}</div>`).join('')}</div>` : '<div class="empty"><div class="big">💸</div>No expenses this month.</div>'}</div></div><button class="fab" aria-label="Add expense">+</button>`;
     $('[data-m]', view).onchange = e => { month = e.target.value || month; draw(); };
     $('.fab', view).onclick = KF.actions.newExpense;
     $$('[data-del]', view).forEach(b => b.onclick = async () => { if (await confirmSheet('Delete this expense?', 'Delete', true)) try { await api('/expenses/' + b.dataset.del, { method: 'DELETE' }); draw(); } catch (e) { toast(e.message); } });
+    $$('[data-pay]', view).forEach(b => b.onclick = () => {
+      const to = member(b.dataset.pay), amt = b.dataset.amt;
+      const upiLink = to.upiId ? `upi://pay?pa=${encodeURIComponent(to.upiId)}&pn=${encodeURIComponent(to.name)}&am=${encodeURIComponent(amt)}&cu=INR` : '';
+      sheet(`<h2>Pay ${esc(to.name)}</h2><div class="center" style="margin:10px 0"><b style="font-size:1.4rem">${money(+amt)}</b></div>
+        ${to.hasUpiQr ? `<img src="/api/users/${to.id}/upi-qr?v=${to.upiQrV || 0}" alt="${esc(to.name)}'s UPI QR code" style="width:200px;height:200px;object-fit:contain;border-radius:12px;background:#fff;padding:10px;display:block;margin:0 auto 12px">` : ''}
+        ${to.upiId ? `<div class="center small" style="margin-bottom:14px">UPI ID: <b data-copy="${esc(to.upiId)}" style="cursor:pointer">${esc(to.upiId)}</b></div>` : ''}
+        <div class="gap">${upiLink ? `<a class="btn gold block" href="${upiLink}">Pay via UPI app</a>` : ''}<button class="btn ghost block" data-close>Close</button></div>`,
+        (s, close) => { wireCopy(s); $('[data-close]', s).onclick = close; });
+    });
   }
   await draw();
 };

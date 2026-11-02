@@ -31,7 +31,7 @@ function authenticate(req) {
   if (!s || s.expires_at < now()) { if (s) q.run('DELETE FROM sessions WHERE id=?', s.id); return null; }
   const u = q.get(`SELECT u.*, m.family_id, m.role, m.perms, m.elite FROM users u LEFT JOIN memberships m ON m.user_id=u.id WHERE u.id=?`, s.user_id);
   if (!u) return null;
-  return { id: u.id, email: u.email, name: u.name, familyId: u.family_id || null, role: u.role || null, elite: !!u.elite, perms: json(u.perms), prefs: json(u.prefs), sessionId: s.id, photoV: u.photo_v, hasPhoto: !!u.photo_v, bgmiUid: u.bgmi_uid || '', ffUid: u.ff_uid || '' };
+  return { id: u.id, email: u.email, name: u.name, familyId: u.family_id || null, role: u.role || null, elite: !!u.elite, perms: json(u.perms), prefs: json(u.prefs), sessionId: s.id, photoV: u.photo_v, hasPhoto: !!u.photo_v, bgmiUid: u.bgmi_uid || '', ffUid: u.ff_uid || '', upiId: u.upi_id || '', upiQrV: u.upi_qr_v, hasUpiQr: !!u.upi_qr_v };
 }
 
 /* ---------- permissions ---------- */
@@ -67,9 +67,9 @@ const emailOk = e => /^[^\s@]{1,64}@[^\s@]{1,255}\.[^\s@]{2,}$/.test(e);
 /* ---------- family helpers ---------- */
 const familyMemberIds = fid => q.all('SELECT user_id FROM memberships WHERE family_id=?', fid).map(r => r.user_id);
 const sameFamily = (u, otherId) => !!q.get('SELECT 1 FROM memberships WHERE user_id=? AND family_id=?', otherId, u.familyId);
-function memberDto(r) { return { id: r.id, name: r.name, email: undefined, role: r.role, elite: !!r.elite, perms: json(r.perms), joinedAt: r.joined_at, hasPhoto: !!r.photo_v, photoV: r.photo_v, bgmiUid: r.bgmi_uid || '', ffUid: r.ff_uid || '' }; }
+function memberDto(r) { return { id: r.id, name: r.name, email: undefined, role: r.role, elite: !!r.elite, perms: json(r.perms), joinedAt: r.joined_at, hasPhoto: !!r.photo_v, photoV: r.photo_v, bgmiUid: r.bgmi_uid || '', ffUid: r.ff_uid || '', upiId: r.upi_id || '', upiQrV: r.upi_qr_v, hasUpiQr: !!r.upi_qr_v }; }
 function members(fid) {
-  return q.all('SELECT u.id,u.name,u.photo_v,u.bgmi_uid,u.ff_uid,m.role,m.elite,m.perms,m.joined_at FROM memberships m JOIN users u ON u.id=m.user_id WHERE m.family_id=? ORDER BY m.joined_at', fid).map(memberDto);
+  return q.all('SELECT u.id,u.name,u.photo_v,u.bgmi_uid,u.ff_uid,u.upi_id,u.upi_qr_v,m.role,m.elite,m.perms,m.joined_at FROM memberships m JOIN users u ON u.id=m.user_id WHERE m.family_id=? ORDER BY m.joined_at', fid).map(memberDto);
 }
 const SECTION_TYPES = ['general', 'daily', 'events', 'planning', 'shopping'];
 const SECTION_NAMES = { general: 'General Clan Chat', daily: 'Daily Discussion', events: 'Clan Events', planning: 'Match Planning', shopping: 'Gear Chat' };
