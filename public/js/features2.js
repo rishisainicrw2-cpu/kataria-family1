@@ -25,7 +25,7 @@ KF.views.profile = async view => {
     <div class="card list">
       ${link('#/shopping', 'cart', 'Shopping lists')}${link('#/expenses', 'money', 'Clan funds', 'Private')}${link('#/memories', 'photo', 'Memories & albums')}${link('#/polls', 'poll', 'Polls & voting')}${link('#/events', 'cal', 'Clan events')}${link('#/files', 'folder', 'File manager', 'Files stored in Google Drive')}</div>
     <div class="card list">
-      ${link('#/members', 'users', 'Clan members', `${KF.state.members.length} in ${esc(f.name)}`)}${admin ? link('#/invitations', 'invite', 'Invitations') : ''}${admin ? link('#/family', 'home', 'Clan settings') : ''}${me.role === 'owner' ? link('#/drive', 'drive', 'Google Drive connection') : ''}</div>
+      ${link('#/members', 'users', 'Clan members', `${KF.state.members.length} in ${esc(f.name)}`)}${admin ? link('#/invitations', 'invite', 'Invitations') : ''}${admin ? `<a href="/scrims" target="_blank" rel="noopener" class="row" style="text-decoration:none;color:inherit;padding:12px 0"><span class="avatar sm" style="border-radius:12px">🏆</span><span class="grow"><b>Scrims &amp; Tournaments</b><div class="small muted">Manage invite links, players &amp; announcements</div></span><span class="muted">↗</span></a>` : ''}${admin ? link('#/family', 'home', 'Clan settings') : ''}${me.role === 'owner' ? link('#/drive', 'drive', 'Google Drive connection') : ''}</div>
     <div class="card list">${link('#/settings', 'gear', 'App settings', 'Theme, notifications')}${link('#/privacy', 'lock', 'Privacy & security')}${link('#/help', 'help', 'Help & support')}</div>
     <button class="btn ghost block" data-out>Log out</button>
     <div class="center small muted">HINDU ESPORTS · Together as One ✦</div></div>`;

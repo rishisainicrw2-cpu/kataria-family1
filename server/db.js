@@ -141,6 +141,40 @@ CREATE TABLE IF NOT EXISTS drive_extra(
   root_folder_id TEXT, folder_ids TEXT DEFAULT '{}', status TEXT DEFAULT 'connected', connected_at INTEGER);
 
 CREATE INDEX IF NOT EXISTS ix_drive_extra_family ON drive_extra(family_id);
+
+-- Scrims & Tournaments: a single standalone group, fully separate from the clan (families/memberships).
+-- External players join via an invite code and never become clan members; clan leaders/co-leaders manage it
+-- and post into it using their normal account (ctx.user), so there is no separate "admin" identity table.
+CREATE TABLE IF NOT EXISTS scrims_invites(
+  id TEXT PRIMARY KEY, code TEXT UNIQUE NOT NULL, label TEXT,
+  max_uses INTEGER NOT NULL DEFAULT 0, uses INTEGER NOT NULL DEFAULT 0,
+  expires_at INTEGER, revoked INTEGER NOT NULL DEFAULT 0,
+  created_by TEXT REFERENCES users(id) ON DELETE SET NULL, created_at INTEGER NOT NULL);
+
+CREATE TABLE IF NOT EXISTS scrims_participants(
+  id TEXT PRIMARY KEY, name TEXT NOT NULL, invite_id TEXT REFERENCES scrims_invites(id) ON DELETE SET NULL,
+  removed INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL);
+
+CREATE TABLE IF NOT EXISTS scrims_sessions(
+  id TEXT PRIMARY KEY, participant_id TEXT NOT NULL REFERENCES scrims_participants(id) ON DELETE CASCADE,
+  created_at INTEGER NOT NULL, expires_at INTEGER NOT NULL);
+
+CREATE INDEX IF NOT EXISTS ix_scrims_sessions_p ON scrims_sessions(participant_id);
+
+-- kind: 'message' | 'announcement' | 'room'. role: 'admin' (posted by a clan leader/co-leader) | 'player' (external participant).
+CREATE TABLE IF NOT EXISTS scrims_messages(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  participant_id TEXT REFERENCES scrims_participants(id) ON DELETE SET NULL,
+  admin_id TEXT REFERENCES users(id) ON DELETE SET NULL,
+  author_name TEXT NOT NULL, role TEXT NOT NULL DEFAULT 'player',
+  kind TEXT NOT NULL DEFAULT 'message', text TEXT NOT NULL DEFAULT '',
+  pinned INTEGER NOT NULL DEFAULT 0, deleted INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL);
+
+CREATE INDEX IF NOT EXISTS ix_scrims_msg ON scrims_messages(id);
+
+CREATE TABLE IF NOT EXISTS scrims_reports(
+  id TEXT PRIMARY KEY, message_id INTEGER NOT NULL REFERENCES scrims_messages(id) ON DELETE CASCADE,
+  reporter_participant_id TEXT, reporter_admin_id TEXT, reason TEXT, created_at INTEGER NOT NULL);
 `);
 
 // Migration: which pooled account holds each file (NULL = the main account). Runs after a restore too, so older backups upgrade cleanly.

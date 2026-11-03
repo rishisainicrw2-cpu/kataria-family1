@@ -77,6 +77,9 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; cha
 function serveStatic(req, res) {
   let p = decodeURIComponent(new URL(req.url, 'http://x').pathname);
   if (p === '/') p = '/index.html';
+  // Scrims & Tournaments is a completely separate static page — it never loads the clan app shell (index.html),
+  // so an external invitee can never see clan branding, navigation or dashboard, even for a moment.
+  else if (p === '/scrims' || p === '/join-scrims') p = '/scrims.html';
   const file = path.normalize(path.join(cfg.PUBLIC_DIR, p));
   if (!file.startsWith(cfg.PUBLIC_DIR) || !fs.existsSync(file) || !fs.statSync(file).isFile()) {
     if (path.extname(p)) { res.writeHead(404); return res.end('Not found'); }

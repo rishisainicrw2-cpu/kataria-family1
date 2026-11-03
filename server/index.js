@@ -13,6 +13,7 @@ const cfg = require('./config');
   const ws = require('./ws');
   require('./routes_core');
   const { runReminders } = require('./routes_features');
+  const scrims = require('./routes_scrims');
   const backup = require('./backup');
 
   const server = http.createServer((req, res) => handle(req, res, L.authenticate));
@@ -23,8 +24,10 @@ const cfg = require('./config');
       const origin = req.headers.origin;
       if (origin && new URL(origin).host !== req.headers.host) return socket.destroy(); // block cross-site WebSocket hijacking
       const user = L.authenticate(req);
-      if (!user || !user.familyId) { socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n'); return socket.destroy(); }
-      ws.accept(req, socket, user);
+      if (user && user.familyId) return ws.accept(req, socket, user); // clan member (includes leaders/co-leaders managing Scrims)
+      const participant = scrims.authenticateParticipant(req); // external Scrims player — a separate, non-clan identity
+      if (participant) return ws.accept(req, socket, { id: 'scrim:' + participant.id, familyId: null });
+      socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n'); socket.destroy();
     } catch (e) { socket.destroy(); }
   });
 
