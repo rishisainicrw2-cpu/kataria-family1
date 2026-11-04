@@ -8,6 +8,7 @@ const backup = require('./backup');
 const ws = require('./ws');
 const drive = require('./drive');
 const push = require('./push');
+const mailer = require('./mailer');
 const cfg = require('./config');
 
 const CODE_ALPHA = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
@@ -64,12 +65,22 @@ route('POST', '/api/auth/reset-request', async ctx => {
     const code = makeCode();
     q.run('UPDATE users SET reset_hash=?, reset_expires=? WHERE id=?', L.sha(code), now() + 30 * 60000, u.id);
     console.log(`[password reset] code for ${email}: ${code} (valid 30 min)`);
-    // No email service is used. Clan leaders/admins see the code in-app so they can pass it on securely.
-    const fam = q.get('SELECT family_id FROM memberships WHERE user_id=?', u.id);
-    if (fam) {
-      const admins = q.all("SELECT user_id FROM memberships WHERE family_id=? AND role IN ('owner','admin') AND user_id!=?", fam.family_id, u.id).map(r => r.user_id);
-      for (const a of admins) { q.run('INSERT INTO notifications(user_id,title,body,url,kind,created_at) VALUES(?,?,?,?,?,?)', a, `${u.name} asked for a password reset`, `Give them this one-time code (valid 30 minutes): ${code}`, '#/notifications', 'reset', now()); ws.sendTo(a, { type: 'notification', title: `${u.name} asked for a password reset` }); }
-    }
+    // Email the code directly to the person who asked. If mail isn't configured (or sending fails for any
+    // reason — e.g. this host's network blocks outbound SMTP), fall back to notifying clan admins in-app
+    // so they can still pass the code on securely; the reset still works either way.
+    mailer.sendMail({
+      to: email, subject: 'Your HINDU ESPORTS password reset code',
+      text: `Hi ${u.name},\n\nYour one-time password reset code is: ${code}\n\nIt is valid for 30 minutes. If you didn't request this, you can ignore this email.\n\n— HINDU ESPORTS`,
+      html: `<p>Hi ${u.name},</p><p>Your one-time password reset code is:</p><p style="font-size:1.4em;font-weight:bold;letter-spacing:2px">${code}</p><p>It is valid for 30 minutes. If you didn't request this, you can ignore this email.</p><p>— HINDU ESPORTS</p>`,
+    }).then(() => console.log(`[password reset] emailed code to ${email}`))
+      .catch(e => {
+        console.error('[password reset] email send failed, falling back to in-app notice:', e.message);
+        const fam = q.get('SELECT family_id FROM memberships WHERE user_id=?', u.id);
+        if (fam) {
+          const admins = q.all("SELECT user_id FROM memberships WHERE family_id=? AND role IN ('owner','admin') AND user_id!=?", fam.family_id, u.id).map(r => r.user_id);
+          for (const a of admins) { q.run('INSERT INTO notifications(user_id,title,body,url,kind,created_at) VALUES(?,?,?,?,?,?)', a, `${u.name} asked for a password reset`, `Give them this one-time code (valid 30 minutes): ${code}`, '#/notifications', 'reset', now()); ws.sendTo(a, { type: 'notification', title: `${u.name} asked for a password reset` }); }
+        }
+      });
   }
   return { ok: true };
 }, { auth: false, limit: { bucket: 'reset', max: 5 } });
