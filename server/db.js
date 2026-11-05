@@ -186,6 +186,9 @@ for (const col of ['upi_id TEXT', 'upi_qr BLOB', 'upi_qr_mime TEXT', 'upi_qr_v I
   if (!db.prepare('PRAGMA table_info(users)').all().some(c => c.name === col.split(' ')[0])) db.exec(`ALTER TABLE users ADD COLUMN ${col}`);
 // Elite = a recognised rank between Member and Co-Leader. It is a badge only: it gives no extra powers (role stays 'member').
 if (!db.prepare('PRAGMA table_info(memberships)').all().some(c => c.name === 'elite')) db.exec('ALTER TABLE memberships ADD COLUMN elite INTEGER NOT NULL DEFAULT 0');
+// Opt-in WhatsApp number for alerts (match reminders, new messages, admin notices). Never set automatically —
+// the member types it in themselves, same as the UPI ID above.
+if (!db.prepare('PRAGMA table_info(users)').all().some(c => c.name === 'whatsapp_phone')) db.exec('ALTER TABLE users ADD COLUMN whatsapp_phone TEXT');
 
 const stats = { writes: 0 };   // bumped on every write; the Drive backup job uses it to know when something changed
 const cache = new Map();

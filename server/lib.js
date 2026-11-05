@@ -31,7 +31,7 @@ function authenticate(req) {
   if (!s || s.expires_at < now()) { if (s) q.run('DELETE FROM sessions WHERE id=?', s.id); return null; }
   const u = q.get(`SELECT u.*, m.family_id, m.role, m.perms, m.elite FROM users u LEFT JOIN memberships m ON m.user_id=u.id WHERE u.id=?`, s.user_id);
   if (!u) return null;
-  return { id: u.id, email: u.email, name: u.name, familyId: u.family_id || null, role: u.role || null, elite: !!u.elite, perms: json(u.perms), prefs: json(u.prefs), sessionId: s.id, photoV: u.photo_v, hasPhoto: !!u.photo_v, bgmiUid: u.bgmi_uid || '', ffUid: u.ff_uid || '', upiId: u.upi_id || '', upiQrV: u.upi_qr_v, hasUpiQr: !!u.upi_qr_v };
+  return { id: u.id, email: u.email, name: u.name, familyId: u.family_id || null, role: u.role || null, elite: !!u.elite, perms: json(u.perms), prefs: json(u.prefs), sessionId: s.id, photoV: u.photo_v, hasPhoto: !!u.photo_v, bgmiUid: u.bgmi_uid || '', ffUid: u.ff_uid || '', upiId: u.upi_id || '', upiQrV: u.upi_qr_v, hasUpiQr: !!u.upi_qr_v, whatsappPhone: u.whatsapp_phone || '' };
 }
 
 /* ---------- permissions ---------- */
