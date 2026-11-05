@@ -27,6 +27,7 @@ KF.views.profile = async view => {
     <div class="card list">
       ${link('#/members', 'users', 'Clan members', `${KF.state.members.length} in ${esc(f.name)}`)}${admin ? link('#/invitations', 'invite', 'Invitations') : ''}${admin ? `<a href="/scrims" target="_blank" rel="noopener" class="row" style="text-decoration:none;color:inherit;padding:12px 0"><span class="avatar sm" style="border-radius:12px">🏆</span><span class="grow"><b>Scrims &amp; Tournaments</b><div class="small muted">Manage invite links, players &amp; announcements</div></span><span class="muted">↗</span></a>` : ''}${admin ? link('#/family', 'home', 'Clan settings') : ''}${me.role === 'owner' ? link('#/drive', 'drive', 'Google Drive connection') : ''}</div>
     <div class="card list">${link('#/settings', 'gear', 'App settings', 'Theme, notifications')}${link('#/privacy', 'lock', 'Privacy & security')}${link('#/help', 'help', 'Help & support')}</div>
+    <a href="https://www.instagram.com/hindu_esports18" target="_blank" rel="noopener" class="card row" style="text-decoration:none;color:inherit"><span class="avatar sm" style="border-radius:12px;background:linear-gradient(135deg,#f58529,#dd2a7b,#8134af)">📷</span><span class="grow"><b>Follow us on Instagram</b><div class="small muted">@hindu_esports18 · Official clan page</div></span><span class="muted">↗</span></a>
     <button class="btn ghost block" data-out>Log out</button>
     <div class="center small muted">HINDU ESPORTS · Together as One ✦</div></div>`;
   wireCopy(view);

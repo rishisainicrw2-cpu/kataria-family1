@@ -100,7 +100,8 @@ KF.views.home = async (view) => {
     <div class="card" style="background:linear-gradient(135deg,var(--blue),var(--blue-d) 60%,var(--ink));color:#fff;border:0">
       <div class="row"><img src="/assets/icon-192.png" width="56" height="56" style="border-radius:14px" alt="">
         <div class="grow"><div style="opacity:.8;font-size:.85rem">${greet}, ${esc(me.name.split(' ')[0])} ✦</div>
-        <h2 style="color:#fff">${esc(f.name)}</h2><div class="small" style="color:var(--gold-l)">Together as One ✦</div></div></div></div>
+        <h2 style="color:#fff">${esc(f.name)}</h2><div class="small" style="color:var(--gold-l)">Together as One ✦</div></div>
+        <a href="https://www.instagram.com/hindu_esports18" target="_blank" rel="noopener" style="color:#fff;opacity:.9;display:flex;align-items:center;gap:4px;text-decoration:none;font-size:.8rem" title="Official Instagram"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg></a></div></div>
     ${pushOffer}
     ${d.announcements.length ? `<div class="card" style="border-color:var(--gold)"><h3>📢 Announcements</h3>${d.announcements.map(a => `<div class="small" style="padding:4px 0"><b>${esc(a.title)}</b><div class="muted">${esc(a.body)}</div></div>`).join('')}</div>` : ''}
     <div class="grid2" style="grid-template-columns:repeat(3,1fr)">${quick.map(q => `<button class="quick" data-q="${q[2]}"><span class="q">${icon(q[0])}</span>${q[1]}</button>`).join('')}</div>
