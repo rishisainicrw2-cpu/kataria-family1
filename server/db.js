@@ -190,6 +190,24 @@ if (!db.prepare('PRAGMA table_info(memberships)').all().some(c => c.name === 'el
 // the member types it in themselves, same as the UPI ID above.
 if (!db.prepare('PRAGMA table_info(users)').all().some(c => c.name === 'whatsapp_phone')) db.exec('ALTER TABLE users ADD COLUMN whatsapp_phone TEXT');
 
+// Player recruitment: a public applicant never gets a clan account — the unguessable `code` (shown once after
+// submitting) is the only way to look their application back up, the same pattern as scrims_invites.code above.
+// `preferred_team` is just a preference at this stage; actual roster assignment (added with the Teams module)
+// happens later, after an approved applicant has been separately invited into the clan in the normal way.
+db.exec(`
+CREATE TABLE IF NOT EXISTS recruitment_applications(
+  id TEXT PRIMARY KEY, code TEXT UNIQUE NOT NULL,
+  full_name TEXT NOT NULL, ign TEXT NOT NULL, bgmi_uid TEXT NOT NULL, age INTEGER,
+  role TEXT NOT NULL, experience TEXT, previous_team TEXT, preferred_team TEXT NOT NULL,
+  device TEXT, hours TEXT, contact TEXT NOT NULL, social_link TEXT,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','under_review','trial_invited','approved','rejected')),
+  admin_notes TEXT DEFAULT '', reviewed_by TEXT REFERENCES users(id) ON DELETE SET NULL, reviewed_at INTEGER,
+  consent_at INTEGER NOT NULL, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL);
+
+CREATE INDEX IF NOT EXISTS ix_recruit_status ON recruitment_applications(status, created_at);
+CREATE INDEX IF NOT EXISTS ix_recruit_uid ON recruitment_applications(bgmi_uid);
+`);
+
 const stats = { writes: 0 };   // bumped on every write; the Drive backup job uses it to know when something changed
 const cache = new Map();
 function stmt(sql) { let s = cache.get(sql); if (!s) { s = db.prepare(sql); cache.set(sql, s); } return s; }

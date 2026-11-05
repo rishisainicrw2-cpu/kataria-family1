@@ -1,0 +1,67 @@
+/* Player Recruitment — standalone public page. Carries the clan's own brand palette (unlike scrims.css, which
+   deliberately carries none), but is otherwise independent of styles.css so the authenticated app is never at risk. */
+:root{
+  --bg:#0B0B0D; --card:#171719; --card2:#1d1d20; --line:#34312D; --text:#F7F5F0; --muted:#AAA7A0;
+  --saffron:#FF8A00; --gold:#FFC45C; --accent:linear-gradient(135deg,var(--saffron),var(--gold));
+  --ok:#28c76f; --danger:#ff4d4d; --radius:16px; --shadow:0 10px 30px rgba(0,0,0,.5);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:16px;line-height:1.45}
+body{background:radial-gradient(1100px 550px at 50% -10%,rgba(255,138,0,.10),transparent),var(--bg)}
+button,input,textarea,select{font:inherit;color:inherit}
+.hidden{display:none!important}
+.muted{color:var(--muted)} .small{font-size:.82rem} .center{text-align:center}
+.row{display:flex;align-items:center;gap:10px} .grow{flex:1;min-width:0} .wrap{flex-wrap:wrap}
+
+#shell{max-width:620px;margin:0 auto;min-height:100%;padding:0 16px 40px}
+
+header{padding:36px 4px 20px;text-align:center}
+.logo{width:72px;height:72px;border-radius:18px;margin-bottom:14px;box-shadow:var(--shadow)}
+header h1{font-size:1.4rem;margin:0 0 4px;letter-spacing:.3px}
+header .tag{color:var(--gold);font-size:.9rem}
+
+.tabs{display:flex;gap:8px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:5px;margin-bottom:18px}
+.tab{flex:1;border:0;background:transparent;color:var(--muted);padding:10px;border-radius:10px;font-weight:700;cursor:pointer}
+.tab.on{background:var(--accent);color:#1a0a05}
+
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow);margin-bottom:16px}
+.card h2{font-size:1.05rem;margin:0 0 4px}
+.card .desc{color:var(--muted);font-size:.86rem;margin-bottom:16px}
+
+label{display:block;font-size:.8rem;color:var(--muted);margin:14px 0 6px}
+label.req::after{content:" *";color:var(--saffron)}
+input[type=text],input[type=number],input[type=url],input[type=tel],textarea,select{
+  width:100%;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:var(--card2);color:var(--text);appearance:none}
+input:focus,textarea:focus,select:focus{outline:2px solid var(--saffron);outline-offset:1px}
+textarea{resize:vertical;min-height:70px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
+@media(max-width:480px){.grid2{grid-template-columns:1fr}}
+.hint{font-size:.74rem;color:var(--muted);margin-top:5px}
+.consent{display:flex;gap:10px;align-items:flex-start;margin-top:18px;background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.consent input{width:18px;height:18px;margin-top:2px;flex:none}
+.consent .small{line-height:1.4}
+
+.btn{border:0;border-radius:13px;padding:13px 18px;font-weight:700;cursor:pointer;background:var(--accent);color:#1a0a05;transition:transform .12s,opacity .12s;width:100%;margin-top:18px}
+.btn:active{transform:scale(.98)} .btn[disabled]{opacity:.5;cursor:default}
+.btn.ghost{background:transparent;color:var(--gold);border:1.5px solid var(--line)}
+
+.err{color:var(--danger);font-size:.84rem;margin-top:10px;min-height:1.1em}
+.ok{color:var(--ok);font-size:.84rem;margin-top:10px}
+.spinner{width:22px;height:22px;border:3px solid rgba(255,255,255,.15);border-top-color:var(--saffron);border-radius:50%;animation:spin 1s linear infinite;display:inline-block;vertical-align:middle;margin-right:8px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.appid{background:var(--card2);border:1px dashed var(--gold);border-radius:12px;padding:16px;text-align:center;margin-top:16px}
+.appid .code{font-size:1.5rem;font-weight:800;letter-spacing:.1em;color:var(--gold);margin:6px 0}
+.copybtn{background:var(--card);border:1px solid var(--line);color:var(--gold);border-radius:10px;padding:8px 14px;font-weight:700;cursor:pointer;font-size:.8rem}
+
+.statuscard{margin-top:18px}
+.pill{display:inline-block;font-size:.72rem;font-weight:800;padding:4px 12px;border-radius:99px;letter-spacing:.03em;text-transform:uppercase}
+.pill.pending{background:#3a3a1f;color:#e8d35c}
+.pill.under_review{background:#1f3140;color:#7fc4ff}
+.pill.trial_invited{background:#1f3a2a;color:#5ce89e}
+.pill.approved{background:#1f3a24;color:#28c76f}
+.pill.rejected{background:#3a1f1f;color:#ff6b6b}
+.statusrow{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);font-size:.88rem}
+.statusrow:last-child{border-bottom:0}
+
+footer{text-align:center;color:var(--muted);font-size:.78rem;margin-top:30px}

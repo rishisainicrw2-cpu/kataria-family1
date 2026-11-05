@@ -80,6 +80,9 @@ function serveStatic(req, res) {
   // Scrims & Tournaments is a completely separate static page — it never loads the clan app shell (index.html),
   // so an external invitee can never see clan branding, navigation or dashboard, even for a moment.
   else if (p === '/scrims' || p === '/join-scrims') p = '/scrims.html';
+  // Player recruitment is also its own standalone page — it carries the clan's branding (unlike Scrims, which
+  // deliberately carries none), but still never loads the authenticated app shell, since applicants have no account.
+  else if (p === '/recruit' || p === '/apply') p = '/recruit.html';
   const file = path.normalize(path.join(cfg.PUBLIC_DIR, p));
   if (!file.startsWith(cfg.PUBLIC_DIR) || !fs.existsSync(file) || !fs.statSync(file).isFile()) {
     if (path.extname(p)) { res.writeHead(404); return res.end('Not found'); }

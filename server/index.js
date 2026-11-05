@@ -14,6 +14,7 @@ const cfg = require('./config');
   require('./routes_core');
   const { runReminders } = require('./routes_features');
   const scrims = require('./routes_scrims');
+  require('./routes_recruitment');
   const backup = require('./backup');
 
   const server = http.createServer((req, res) => handle(req, res, L.authenticate));

@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Join Hindu Esports</title>
+<meta name="description" content="Apply to join Hindu Esports as a competitive BGMI player.">
+<meta name="theme-color" content="#0B0B0D">
+<link rel="icon" href="/assets/icon-192.png">
+<link rel="stylesheet" href="/recruit.css">
+</head>
+<body>
+<div id="shell">
+  <header>
+    <img class="logo" src="/assets/icon-192.png" alt="Hindu Esports">
+    <h1>HINDU ESPORTS</h1>
+    <div class="tag">Player Recruitment — BGMI</div>
+  </header>
+
+  <div class="tabs">
+    <button class="tab on" data-tab="apply">Apply</button>
+    <button class="tab" data-tab="status">Check status</button>
+  </div>
+
+  <!-- ===== APPLY ===== -->
+  <section id="applyPane">
+    <div class="card">
+      <h2>Join the roster</h2>
+      <div class="desc">We're recruiting active, competitive BGMI players for Team Alpha, Bravo and Charlie as we prepare for BGIS. Fill this in honestly — trials follow a real review.</div>
+
+      <form id="applyForm">
+        <label class="req">Full name</label>
+        <input type="text" name="fullName" maxlength="80" required>
+
+        <div class="grid2">
+          <div><label class="req">BGMI in-game name (IGN)</label><input type="text" name="ign" maxlength="40" required></div>
+          <div><label class="req">BGMI UID</label><input type="text" inputmode="numeric" name="bgmiUid" maxlength="20" required><div class="hint">Digits only</div></div>
+        </div>
+
+        <div class="grid2">
+          <div><label>Age</label><input type="number" name="age" min="10" max="60"></div>
+          <div><label class="req">Primary role</label>
+            <select name="role" required>
+              <option value="">Choose…</option>
+              <option>IGL</option><option>Assaulter</option><option>Support</option><option>Scout</option><option>Sniper</option>
+            </select>
+          </div>
+        </div>
+
+        <label>Competitive experience</label>
+        <textarea name="experience" maxlength="1000" placeholder="Tournaments played, achievements, rank, etc."></textarea>
+
+        <label>Previous team experience</label>
+        <input type="text" name="previousTeam" maxlength="300" placeholder="Team name(s), roles, duration">
+
+        <label class="req">Preferred team</label>
+        <select name="preferredTeam" required>
+          <option value="">Choose…</option>
+          <option value="alpha">Team Alpha</option>
+          <option value="bravo">Team Bravo</option>
+          <option value="charlie">Team Charlie</option>
+          <option value="any">Any available team</option>
+        </select>
+
+        <div class="grid2">
+          <div><label>Device model</label><input type="text" name="device" maxlength="100" placeholder="e.g. iQOO 11, 90fps"></div>
+          <div><label>Available playing hours</label><input type="text" name="hours" maxlength="200" placeholder="e.g. 6–10pm IST daily"></div>
+        </div>
+
+        <label class="req">Contact details</label>
+        <input type="text" name="contact" maxlength="150" placeholder="Phone, email or Discord" required>
+
+        <label>Social media / profile link (optional)</label>
+        <input type="url" name="socialLink" maxlength="300" placeholder="https://">
+
+        <div class="consent">
+          <input type="checkbox" name="consent" id="consent" required>
+          <label for="consent" class="small" style="margin:0">I agree that Hindu Esports can collect and use this information to review my application. See the privacy notice below. I have not included any passwords, OTPs or payment details.</label>
+        </div>
+
+        <button class="btn" type="submit" id="applyBtn">Submit application</button>
+        <div class="err" id="applyErr"></div>
+      </form>
+
+      <div class="appid hidden" id="appIdBox">
+        <div class="small muted">Your application ID — save this to check your status later</div>
+        <div class="code" id="appIdCode"></div>
+        <button class="copybtn" id="copyBtn">Copy</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Privacy notice</h2>
+      <div class="desc" style="margin-bottom:0">
+        We collect this information only to review your application and, if selected, to add you to a team roster.
+        It is visible only to Hindu Esports clan leaders and admins reviewing applications — never shown publicly.
+        We keep applications on file to track the recruitment pipeline; email us if you'd like yours deleted.
+        Your contact details are never displayed to other players. We will never ask for your BGMI password, OTP or any payment details — if anyone claiming to be from Hindu Esports asks for these, it is not us.
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== STATUS ===== -->
+  <section id="statusPane" class="hidden">
+    <div class="card">
+      <h2>Check your application status</h2>
+      <div class="desc">Enter the Application ID you were given when you submitted your form.</div>
+      <label class="req">Application ID</label>
+      <input type="text" id="statusCode" placeholder="e.g. AB3D-7K2M" style="text-transform:uppercase">
+      <button class="btn" id="statusBtn">Check status</button>
+      <div class="err" id="statusErr"></div>
+      <div class="statuscard hidden" id="statusResult"></div>
+    </div>
+  </section>
+
+  <footer>HINDU ESPORTS · Together as One ✦</footer>
+</div>
+<script src="/recruit.js"></script>
+</body>
+</html>
