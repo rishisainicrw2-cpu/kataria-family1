@@ -22,15 +22,6 @@ KF.views.profile = async view => {
         ${me.hasUpiQr ? '<button class="btn small ghost" data-upi-qr-del>Remove QR</button>' : ''}
       </div>
     </div>
-    <div class="card">
-      <h3>WhatsApp alerts</h3>
-      <div class="small muted" style="margin-bottom:8px">Opt in to get match reminders and clan alerts on WhatsApp. Your number is never shown to other members.</div>
-      ${me.whatsappPhone ? `<div class="small" style="margin-bottom:6px">📱 <b>+${esc(me.whatsappPhone)}</b></div>` : '<div class="small muted" style="margin-bottom:6px">Not set up yet.</div>'}
-      <div class="row wrap">
-        <button class="btn small ghost" data-wa>${me.whatsappPhone ? 'Change number' : 'Add WhatsApp number'}</button>
-        ${me.whatsappPhone ? '<button class="btn small ghost" data-wa-test>Send test message</button><button class="btn small ghost" data-wa-del>Remove</button>' : ''}
-      </div>
-    </div>
     <div class="card list">
       ${link('#/shopping', 'cart', 'Shopping lists')}${link('#/expenses', 'money', 'Clan funds', 'Private')}${link('#/memories', 'photo', 'Memories & albums')}${link('#/polls', 'poll', 'Polls & voting')}${link('#/events', 'cal', 'Clan events')}${link('#/files', 'folder', 'File manager', 'Files stored in Google Drive')}</div>
     <div class="card list">
@@ -44,9 +35,6 @@ KF.views.profile = async view => {
   $('[data-upi]', view).onclick = async () => { const v = await formSheet('Your UPI ID', [{ name: 'upiId', label: 'UPI ID (e.g. name@bank)', value: me.upiId || '' }]); if (v) try { const u = await api('/me', { method: 'PATCH', body: v }); Object.assign(KF.state.me, u); await KF.refreshFamily(); route(); toast('UPI ID saved'); } catch (e) { toast(e.message); } };
   $('[data-upi-qr]', view).onclick = async () => { const [file] = await pickFile('image/*'); if (!file) return; try { toast('Updating your QR code…', 15000); const small = await shrinkImage(file); const fd = new FormData(); fd.append('file', small); const u = await api('/me/upi-qr', { method: 'POST', body: fd }); Object.assign(KF.state.me, u); await KF.refreshFamily(); route(); toast('QR code updated'); } catch (e) { toast(e.message, 6000); } };
   $('[data-upi-qr-del]', view) && ($('[data-upi-qr-del]', view).onclick = async () => { if (!(await confirmSheet('Remove your UPI QR code?', 'Remove', true))) return; try { const u = await api('/me/upi-qr', { method: 'DELETE' }); Object.assign(KF.state.me, u); await KF.refreshFamily(); route(); } catch (e) { toast(e.message); } });
-  $('[data-wa]', view).onclick = async () => { const v = await formSheet('WhatsApp number', [{ name: 'whatsappPhone', label: 'Number with country code, digits only (e.g. 919876543210)', value: me.whatsappPhone || '' }]); if (v) try { const u = await api('/me', { method: 'PATCH', body: v }); Object.assign(KF.state.me, u); await KF.refreshFamily(); route(); toast('WhatsApp number saved'); } catch (e) { toast(e.message); } };
-  $('[data-wa-test]', view) && ($('[data-wa-test]', view).onclick = async () => { try { await api('/me/whatsapp-test', { method: 'POST' }); toast('Test message sent — check WhatsApp'); } catch (e) { toast(e.message, 6000); } });
-  $('[data-wa-del]', view) && ($('[data-wa-del]', view).onclick = async () => { try { const u = await api('/me', { method: 'PATCH', body: { whatsappPhone: '' } }); Object.assign(KF.state.me, u); await KF.refreshFamily(); route(); } catch (e) { toast(e.message); } });
   $('[data-out]', view).onclick = () => KF.logout();
 };
 

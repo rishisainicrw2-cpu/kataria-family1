@@ -9,7 +9,6 @@ const ws = require('./ws');
 const drive = require('./drive');
 const push = require('./push');
 const mailer = require('./mailer');
-const whatsapp = require('./whatsapp');
 const cfg = require('./config');
 
 const CODE_ALPHA = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
@@ -17,18 +16,11 @@ const makeCode = () => { const b = crypto.randomBytes(8); let s = ''; for (let i
 const PERM_KEYS = ['plans', 'events', 'expenses', 'plans_manage', 'invite'];
 const DEFAULT_PERMS = { plans: true, events: true };
 
-const userDto = u => ({ id: u.id, name: u.name, email: u.email, hasPhoto: !!u.photoV, photoV: u.photoV, prefs: u.prefs, role: u.role, elite: !!u.elite, bgmiUid: u.bgmiUid || '', ffUid: u.ffUid || '', upiId: u.upiId || '', hasUpiQr: !!u.upiQrV, upiQrV: u.upiQrV, whatsappPhone: u.whatsappPhone || '' });
+const userDto = u => ({ id: u.id, name: u.name, email: u.email, hasPhoto: !!u.photoV, photoV: u.photoV, prefs: u.prefs, role: u.role, elite: !!u.elite, bgmiUid: u.bgmiUid || '', ffUid: u.ffUid || '', upiId: u.upiId || '', hasUpiQr: !!u.upiQrV, upiQrV: u.upiQrV });
 // Loose UPI VPA check: "name@bank" — not validated against a real bank, just shaped like a UPI ID. Empty clears it.
 function upiIdVal(v) {
   const s = String(v ?? '').trim(); if (!s) return '';
   if (!/^[a-zA-Z0-9.\-_]{2,100}@[a-zA-Z][a-zA-Z0-9.\-]{1,64}$/.test(s)) throw bad('That doesn\'t look like a UPI ID (it should look like name@bank).');
-  return s;
-}
-// WhatsApp alerts are opt-in: stored as digits only (country code + number, no '+' or spaces), like the
-// format the WhatsApp Cloud API itself expects. Empty clears it (opts back out).
-function whatsappPhoneVal(v) {
-  const s = String(v ?? '').replace(/[\s+()-]/g, ''); if (!s) return '';
-  if (!/^\d{8,15}$/.test(s)) throw bad('Enter your WhatsApp number with country code (e.g. 919876543210), digits only.');
   return s;
 }
 
@@ -115,17 +107,9 @@ route('PATCH', '/api/me', ctx => {
   const bgmiUid = b.bgmiUid !== undefined ? L.gameId(b.bgmiUid, 'BGMI UID') : ctx.user.bgmiUid;
   const ffUid = b.ffUid !== undefined ? L.gameId(b.ffUid, 'Free Fire ID') : ctx.user.ffUid;
   const upiId = b.upiId !== undefined ? upiIdVal(b.upiId) : ctx.user.upiId;
-  const whatsappPhone = b.whatsappPhone !== undefined ? whatsappPhoneVal(b.whatsappPhone) : ctx.user.whatsappPhone;
-  q.run('UPDATE users SET name=?, bgmi_uid=?, ff_uid=?, upi_id=?, whatsapp_phone=? WHERE id=?', name, bgmiUid, ffUid, upiId, whatsappPhone || null, ctx.user.id);
+  q.run('UPDATE users SET name=?, bgmi_uid=?, ff_uid=?, upi_id=? WHERE id=?', name, bgmiUid, ffUid, upiId, ctx.user.id);
   if (ctx.user.familyId) ws.broadcastFamily(ctx.user.familyId, { type: 'family.changed' });
-  return userDto({ ...ctx.user, name, bgmiUid, ffUid, upiId, whatsappPhone });
-});
-// Lets a member confirm the WhatsApp connection actually works, using Meta's built-in "hello_world" template
-// (the only one guaranteed to be pre-approved) — real alert wording needs its own approved template first.
-route('POST', '/api/me/whatsapp-test', async ctx => {
-  if (!ctx.user.whatsappPhone) throw bad('Add your WhatsApp number first.');
-  try { await whatsapp.sendTemplate(ctx.user.whatsappPhone); }
-  catch (e) { throw bad('Could not send: ' + e.message); }
+  return userDto({ ...ctx.user, name, bgmiUid, ffUid, upiId });
 });
 const PREF_BOOL = ['n_messages', 'n_private', 'n_mentions', 'n_plans', 'n_events', 'n_reminders', 'n_polls', 'n_tasks', 'n_announce'];
 route('PATCH', '/api/me/prefs', ctx => {
