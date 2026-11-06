@@ -206,6 +206,13 @@ CREATE TABLE IF NOT EXISTS recruitment_applications(
 
 CREATE INDEX IF NOT EXISTS ix_recruit_status ON recruitment_applications(status, created_at);
 CREATE INDEX IF NOT EXISTS ix_recruit_uid ON recruitment_applications(bgmi_uid);
+
+-- Audit trail of admin status changes on an application — "who changed what, when", shown as application history.
+CREATE TABLE IF NOT EXISTS recruitment_audit(
+  id INTEGER PRIMARY KEY AUTOINCREMENT, application_id TEXT NOT NULL REFERENCES recruitment_applications(id) ON DELETE CASCADE,
+  admin_id TEXT REFERENCES users(id) ON DELETE SET NULL, from_status TEXT, to_status TEXT, note TEXT, created_at INTEGER NOT NULL);
+
+CREATE INDEX IF NOT EXISTS ix_recruit_audit_app ON recruitment_audit(application_id, id);
 `);
 
 const stats = { writes: 0 };   // bumped on every write; the Drive backup job uses it to know when something changed

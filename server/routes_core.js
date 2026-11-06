@@ -13,7 +13,7 @@ const cfg = require('./config');
 
 const CODE_ALPHA = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 const makeCode = () => { const b = crypto.randomBytes(8); let s = ''; for (let i = 0; i < 8; i++) s += CODE_ALPHA[b[i] % CODE_ALPHA.length]; return s.slice(0, 4) + '-' + s.slice(4); };
-const PERM_KEYS = ['plans', 'events', 'expenses', 'plans_manage', 'invite'];
+const PERM_KEYS = ['plans', 'events', 'expenses', 'plans_manage', 'invite', 'recruitment'];
 const DEFAULT_PERMS = { plans: true, events: true };
 
 const userDto = u => ({ id: u.id, name: u.name, email: u.email, hasPhoto: !!u.photoV, photoV: u.photoV, prefs: u.prefs, role: u.role, elite: !!u.elite, bgmiUid: u.bgmiUid || '', ffUid: u.ffUid || '', upiId: u.upiId || '', hasUpiQr: !!u.upiQrV, upiQrV: u.upiQrV });

@@ -1,10 +1,13 @@
-// API: Player Recruitment — a fully public module, isolated from clan accounts.
+// API: Player Recruitment — a fully public application module, plus admin review.
 //
 // Applicants never get a login: they fill in the form and get back a one-time "Application ID" (an
 // unguessable code, same shape as a scrims invite code). That code is the only way to look the application
 // back up later — there is no list-all-applications endpoint reachable without being a clan admin.
-// This file only covers "apply" and "check status". Admin review (approve/reject/notes/team assignment) is a
-// separate, later module — for now applications just sit in the table for an admin to read directly if needed.
+//
+// Admin review is gated by the existing permission system: any clan admin/owner, or a regular member granted
+// the 'recruitment' permission (see PERM_KEYS in routes_core.js), can list, view and act on applications.
+// Nothing here creates clan accounts — approving an applicant is a decision, not an auto-join; the clan leader
+// still sends them a normal invite code afterwards, same as any other new member.
 const crypto = require('crypto');
 const { route, bad, notFound, rateLimit } = require('./http');
 const { q, uid, now } = require('./db');
@@ -71,3 +74,59 @@ route('GET', '/api/recruitment/status/:code', ctx => {
   if (!a) throw notFound('No application found with that ID. Double-check the code from your confirmation.');
   return appPublicDto(a);
 }, { auth: false });
+
+/* =============== ADMIN REVIEW =============== */
+const STATUSES = Object.keys(STATUS_LABEL);
+
+function appAdminDto(a) {
+  return {
+    id: a.id, code: a.code, status: a.status, statusLabel: STATUS_LABEL[a.status],
+    fullName: a.full_name, ign: a.ign, bgmiUid: a.bgmi_uid, age: a.age, role: a.role,
+    experience: a.experience || '', previousTeam: a.previous_team || '', preferredTeam: a.preferred_team, preferredTeamLabel: TEAM_LABEL[a.preferred_team],
+    device: a.device || '', hours: a.hours || '', contact: a.contact, socialLink: a.social_link || '',
+    adminNotes: a.admin_notes || '', reviewedBy: a.reviewed_by, reviewedAt: a.reviewed_at,
+    submittedAt: a.created_at, updatedAt: a.updated_at,
+  };
+}
+function requireReviewer(u) { L.needPerm(u, 'recruitment', 'You do not have permission to review player applications. Ask the clan leader.'); }
+
+// List + search + filter. Admin only (or a member granted the 'recruitment' permission).
+route('GET', '/api/recruitment/applications', ctx => {
+  requireReviewer(ctx.user);
+  const where = [], params = [];
+  if (ctx.query.status && STATUSES.includes(ctx.query.status)) { where.push('status=?'); params.push(ctx.query.status); }
+  if (ctx.query.role && ROLES.includes(ctx.query.role)) { where.push('role=?'); params.push(ctx.query.role); }
+  if (ctx.query.team && TEAMS.includes(ctx.query.team)) { where.push('preferred_team=?'); params.push(ctx.query.team); }
+  const qstr = L.str(ctx.query.q, { max: 80 });
+  if (qstr) { where.push('(ign LIKE ? OR bgmi_uid LIKE ? OR code LIKE ? OR full_name LIKE ?)'); const like = `%${qstr}%`; params.push(like, like, like, like); }
+  const sql = `SELECT * FROM recruitment_applications${where.length ? ' WHERE ' + where.join(' AND ') : ''} ORDER BY created_at DESC LIMIT 500`;
+  const rows = q.all(sql, ...params);
+  const counts = q.get(`SELECT COUNT(*) total, SUM(status='pending') pending, SUM(status='under_review') underReview, SUM(status='trial_invited') trialInvited, SUM(status='approved') approved, SUM(status='rejected') rejected FROM recruitment_applications`);
+  return { applications: rows.map(appAdminDto), counts };
+});
+
+route('GET', '/api/recruitment/applications/:id', ctx => {
+  requireReviewer(ctx.user);
+  const a = q.get('SELECT * FROM recruitment_applications WHERE id=?', ctx.params.id);
+  if (!a) throw notFound();
+  const history = q.all('SELECT * FROM recruitment_audit WHERE application_id=? ORDER BY id DESC', a.id)
+    .map(h => ({ id: h.id, adminId: h.admin_id, fromStatus: h.from_status, toStatus: h.to_status, note: h.note || '', createdAt: h.created_at }));
+  return { ...appAdminDto(a), history };
+});
+
+route('PATCH', '/api/recruitment/applications/:id', ctx => {
+  requireReviewer(ctx.user);
+  const a = q.get('SELECT * FROM recruitment_applications WHERE id=?', ctx.params.id);
+  if (!a) throw notFound();
+  const b = ctx.body;
+  const status = b.status !== undefined ? L.str(b.status, { name: 'Status', required: true }) : a.status;
+  if (!STATUSES.includes(status)) throw bad('Invalid status.');
+  const adminNotes = b.adminNotes !== undefined ? L.str(b.adminNotes, { name: 'Notes', max: 2000 }) : a.admin_notes;
+  const t = now();
+  q.run('UPDATE recruitment_applications SET status=?, admin_notes=?, reviewed_by=?, reviewed_at=?, updated_at=? WHERE id=?',
+    status, adminNotes, ctx.user.id, t, t, a.id);
+  if (status !== a.status) q.run('INSERT INTO recruitment_audit(application_id,admin_id,from_status,to_status,note,created_at) VALUES(?,?,?,?,?,?)',
+    a.id, ctx.user.id, a.status, status, L.str(b.note, { max: 300 }), t);
+  L.bump(ctx.user.familyId, 'recruitment', ctx.user.id);
+  return appAdminDto({ ...a, status, admin_notes: adminNotes, reviewed_by: ctx.user.id, reviewed_at: t, updated_at: t });
+});
